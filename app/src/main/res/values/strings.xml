@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Droid adb tools</string>
+    <string name="network_adapters">Network Adapters</string>
+    <string name="bin_commands">Bin Commands</string>
+
+
+</resources>

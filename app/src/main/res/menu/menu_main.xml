@@ -1,0 +1,55 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".MainActivity">
+    <!--item
+        tools:context=".MainActivity"
+        android:icon="@drawable/ic_menu_moreoverflow"
+        android:orderInCategory="100"
+        android:title="@string/menu_butt"
+        app:showAsAction="ifRoom|withText"-->
+    <!--menu-->
+    <item
+        android:id="@+id/action_settings"
+        android:checked="false"
+        android:enabled="true"
+        android:orderInCategory="105"
+        android:title="Settings"
+        android:visible="true" />
+    <item
+    android:id="@+id/get_list_con_dev"
+    android:checked="false"
+    android:enabled="true"
+    android:orderInCategory="105"
+    android:title="List Connected Dev"
+    android:visible="true" />
+    <item
+        android:id="@+id/action_add_dev"
+        android:orderInCategory="110"
+        android:title="Add dev"
+        app:showAsAction="never" />
+    <item
+    android:id="@+id/action_select_dev"
+    android:orderInCategory="110"
+    android:title="Select Devices"
+    app:showAsAction="never" />
+    <item
+        android:id="@+id/action_adb_kill"
+        android:orderInCategory="110"
+        android:title="Kill adb service"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_adb_start"
+        android:orderInCategory="110"
+        android:title="start adb service"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_adb_shell"
+        android:orderInCategory="110"
+        android:title="Adb shell"
+        app:showAsAction="never" />
+
+    <!--/menu>
+</item-->
+
+</menu>
