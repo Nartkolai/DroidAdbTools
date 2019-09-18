@@ -35,7 +35,7 @@ import name.schedenig.adbcontrol.Config;
 
 public class MainActivity extends AppCompatActivity {
     private FsUtil fsUtil;
-    private DialogAlter dialogAlter;/
+    private DialogAlter dialogAlter;
     private TextView textView, tvIp;
     public static final String TAG = "Droid adb tools";
     @SuppressLint("SdCardPath")
