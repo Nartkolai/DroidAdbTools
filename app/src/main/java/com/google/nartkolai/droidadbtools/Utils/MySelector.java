@@ -49,4 +49,18 @@ public interface MySelector {
       * @return object containing the called method
       */
      Object getObject();
+
+     /**
+      * @param tilts window title of the selected item
+      * @param text default text in the input field
+      * @param inputType change the way you enter values
+      */
+     void toAlterDialogInputValues(String tilts, String text, int inputType);
+
+     /**
+      * @param tilts window title of the selected item
+      * @param subTilts window title of the selected item
+      * @param list list of processed items
+      */
+     void toAlterDialogListItem(String tilts, String subTilts, String[] list);
 }

@@ -4,7 +4,7 @@ package com.google.nartkolai.droidadbtools.Utils;
 import java.lang.reflect.Method;
 
 public class MySelectorImpl implements MySelector{
-    private String[] l = null;
+    private String[] list = null;
     private String tilts = "";
     private String subTilts = "";
     private String text = "";
@@ -21,12 +21,12 @@ public class MySelectorImpl implements MySelector{
 
     @Override
     public void setItemList(String[] list) {
-        this.l = list;
+        this.list = list;
     }
 
     @Override
     public String[] getItemList() {
-        return l;
+        return list;
     }
 
     @Override
@@ -84,6 +84,18 @@ public class MySelectorImpl implements MySelector{
         return input;
     }
 
-
-
+    @Override
+    public void toAlterDialogInputValues(String tilts, String text, int inputType){
+        this.tilts = tilts;
+        this.text = text;
+        this.inputType = inputType;
+        this.input = true;
+    }
+    @Override
+    public void toAlterDialogListItem(String tilts, String subTilts, String[] list){
+        this.tilts = tilts;
+        this.subTilts = subTilts;
+        this.list = list;
+        this.input = false;
+    }
 }

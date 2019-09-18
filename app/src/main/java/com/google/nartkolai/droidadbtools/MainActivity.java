@@ -122,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public void setDelay(String delay){
             MyPrefHelper.putPref("screenshotDelay", Integer.valueOf(delay), MainActivity.this);
+            config.setScreenshotDelay(Integer.valueOf(delay));
     }
     public void addIpDevices(String ip){
         textView.setText(ip);
@@ -168,10 +169,7 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
                 mySelector = new MySelectorImpl(this, myMethod);
-                mySelector.setNeedInput(true);
-                mySelector.setTilts("Delay Screen");
-                mySelector.setText("" + MyPrefHelper.getPref("screenshotDelay", 1000, MainActivity.this));
-                mySelector.setInputType(InputType.TYPE_NUMBER_FLAG_SIGNED | InputType.TYPE_CLASS_NUMBER);
+                mySelector.toAlterDialogInputValues("Delay Screen", String.valueOf(config.getScreenshotDelay()), (InputType.TYPE_NUMBER_FLAG_SIGNED | InputType.TYPE_CLASS_NUMBER));
                 dialogAlter.displayDialog(mySelector);
                 return true;
             // add dev
@@ -182,10 +180,7 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
                 mySelector = new MySelectorImpl(this, myMethod);
-                mySelector.setNeedInput(true);
-                mySelector.setTilts("Add IP devices");
-                mySelector.setText("192.168.");
-                mySelector.setInputType(InputType.TYPE_NUMBER_FLAG_SIGNED | InputType.TYPE_NUMBER_VARIATION_NORMAL);
+                mySelector.toAlterDialogInputValues("Add IP devices", "192.168.", (InputType.TYPE_NUMBER_FLAG_SIGNED | InputType.TYPE_NUMBER_VARIATION_NORMAL));
                 dialogAlter.displayDialog(mySelector);
                 return true;
             // Select dev
@@ -199,10 +194,7 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
                 mySelector = new MySelectorImpl(this, myMethod);
-                mySelector.setNeedInput(false);
-                mySelector.setTilts("Select IP devices");
-                mySelector.setSubTilts("Delete select devices");
-                mySelector.setItemList(list);
+                mySelector.toAlterDialogListItem("Select IP devices","Delete select devices", list);
                 dialogAlter.displayDialog(mySelector);
                 return true;
 
@@ -241,10 +233,7 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
                 mySelector = new MySelectorImpl(this, myMethod);
-                mySelector.setNeedInput(true);
-                mySelector.setTilts("adb command");
-                mySelector.setText("pull /sdcard/adbcontrol_screenshot.png /sdcard/adbcontrol_screenshot.png");
-                mySelector.setInputType(InputType.TYPE_CLASS_TEXT);
+                mySelector.toAlterDialogInputValues("adb command","pull /sdcard/adbcontrol_screenshot.png /sdcard/adbcontrol_screenshot.png", InputType.TYPE_CLASS_TEXT);
                 dialogAlter.displayDialog(mySelector);
                 return true;
             default:
@@ -262,7 +251,6 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, " txt.append(s) " + s);
         }
         assert false;
-        Log.e(TAG, "cmd txtSetter " + txt.toString());
         textView.setText(txt.toString());
     }
 
