@@ -13,6 +13,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,14 +27,19 @@ import com.google.nartkolai.droidadbtools.Utils.MyPrefHelper;
 import com.google.nartkolai.droidadbtools.Utils.MySelectorImpl;
 import com.jjnford.android.util.Shell;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 
 import name.schedenig.adbcontrol.Config;
 
 public class MainActivity extends AppCompatActivity {
+    String[] cmd;
     private FsUtil fsUtil;
     private DialogAlter dialogAlter;
     private TextView textView, tvIp;
@@ -43,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private String myAdbCmd;
     private String useIpAdrDev = "Devices not selected";
     private int verPref;
-    //public static String[] paht = {"PATH=$PATH:" + myPath};
+    public static String[] myExportPaht = {"LD_LIBRARY_PATH=$LD_LIBRARY_PATH:" + myPath + "/lib"};
     public static Config config;
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
@@ -53,47 +59,33 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         dialogAlter = new DialogAlter(this);
-        verPref = 1;
+        verPref = 2;
         String fileName = "ipAdrDev";
         fsUtil = new FsUtil(this, fileName);
         textView = findViewById(R.id.out_text);
         tvIp = findViewById(R.id.txt_current_ip);
         tvIp.setText(useIpAdrDev);
         checkIfAlreadyhavePermission();
-
-        /*
-         * Adb binary file removed from android version more LOLLIPOP_MR1
-         */
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1) {
-            myAdbCmd = myPath + "/./adb";
-            try {
-                this.openFileInput("adb");
-            } catch (FileNotFoundException e) {
-                try {
-                    String[] cmd;
-                    CopyFiles.copyFile(this, (myPath + "/adb"));
-                    cmd = Shell.exec("chmod 775 " + myPath + "/adb").split("\\n+");
-                    txtSetter(cmd);
-                } catch (IOException ignore) {
-                } catch (Shell.ShellException e1) {
-                    e1.printStackTrace();
-                }
-                e.printStackTrace();
-            }
-        } else {
-            myAdbCmd = "adb";
-        }
+        checkIfAlreadyWritehavePermission();
+        selectAdbCmdAndCopyBinFiles();
         fsUtil.chkFile();// Check JSON files
         chkConfig();
     }
 
+    @Override
+    protected void onResume() {
+        selectAdbCmdAndCopyBinFiles();
+        super.onResume();
+    }
+
 
     public void onStartScreenActivity(View view) {
-        if (checkIfAlreadyhavePermission() || Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP_MR1) {
+        if ((checkIfAlreadyWritehavePermission() && checkIfAlreadyhavePermission()) || Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP_MR1) {
             startActivity(new Intent(this, ScreenActivity.class));
         } else {
             Toast.makeText(MainActivity.this, "Please give your permission.", Toast.LENGTH_LONG).show();
-            ActivityCompat.requestPermissions(MainActivity.this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
         }
     }
 
@@ -107,13 +99,43 @@ public class MainActivity extends AppCompatActivity {
         }else {
         useIpAdrDev = position;
         tvIp.setText(useIpAdrDev);
-        String[] cmd;
+       // String[] cmd;
         try {
             cmd = Shell.exec(myAdbCmd + " connect " + useIpAdrDev).split("\\n+");
             txtSetter(cmd);
         } catch (Shell.ShellException e) {
             e.printStackTrace();
         }
+        }
+    }
+
+    void selectAdbCmdAndCopyBinFiles(){
+        /*
+         * Adb binary file removed from android version more LOLLIPOP_MR1
+         */
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1) {
+            myAdbCmd = myPath + "/bin/./adb";
+            try {
+                new FileInputStream(myPath + "/bin/adb");
+                new FileInputStream(myPath + "/lib/libcrypto.so");
+            } catch (FileNotFoundException e) {
+                try {
+                    Shell.exec("mkdir " + myPath + "/lib");
+                    Shell.exec("mkdir " + myPath + "/bin");
+                    Shell.exec("chmod 775 " + myPath + "/bin/");
+                    Shell.exec("chmod 775 " + myPath + "/lib/");
+                    Shell.exec("cp -f /sdcard/adb/adb" + " " +  myPath + "/bin/adb");
+                    Shell.exec("chmod 755 " + myPath + "/bin/adb");
+                    Shell.exec("cp -f /sdcard/adb/libcrypto.so" + " " +  myPath + "/lib/libcrypto.so");
+                    Shell.exec("chmod 755 " + myPath + "/lib/libcrypto.so");
+
+                } catch (Shell.ShellException e1) {
+                    e1.printStackTrace();
+                }
+                e.printStackTrace();
+            }
+        } else {
+            myAdbCmd = "adb";
         }
     }
 
@@ -131,10 +153,60 @@ public class MainActivity extends AppCompatActivity {
     public void actAdbCmd(String shell){
         Log.i(TAG, "from newShell  " + shell);
         try {
+            Shell.setOutputStream(Shell.OUTPUT.STDOUT);
             // cmd1[0] = Shell.exec(String.valueOf(shell.getText())).split("\\n+");
             String[] cmd1 = Shell.exec(myAdbCmd + " " + shell).split("\\n+");
             txtSetter(cmd1);
-            Shell.exec("ls");
+          //  Shell.exec("ls");
+        } catch (Shell.ShellException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void getListConnectedDevices(){
+        try {
+            cmd = null;
+            cmd = Shell.exec(myAdbCmd + " devices").split("\\n+");
+            txtSetter(cmd);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    void killAdbServer(){
+        try {
+            cmd = Shell.exec(myAdbCmd + " kill-server").split("\\n+");
+            txtSetter(cmd);
+        } catch (Shell.ShellException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void startAdbServer(){
+        try {
+            cmd = Shell.exec(myAdbCmd + " start-server").split("\\n+");
+            txtSetter(cmd);
+        } catch (Shell.ShellException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void adbDisconnectAll(){
+        try {
+            cmd = Shell.exec(myAdbCmd + " disconnect").split("\\n+");
+            txtSetter(cmd);
+        } catch (Shell.ShellException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
+     * Use for ROOT devices that do not respond to actions.
+     */
+    void fixSuSetenforceDevice(){
+        try {
+            cmd = Shell.exec(myAdbCmd + " shell su 0 setenforce 0").split("\\n+");
+            txtSetter(cmd);
         } catch (Shell.ShellException e) {
             e.printStackTrace();
         }
@@ -154,7 +226,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         MySelectorImpl mySelector;
-        final String[][] cmd = {{""}};
         final String[] list = fsUtil.jsonHelperGetItemArr();
         int id = item.getItemId();
         Class[] parameterTypes = new Class[1];
@@ -198,34 +269,6 @@ public class MainActivity extends AppCompatActivity {
                 dialogAlter.displayDialog(mySelector);
                 return true;
 
-            case R.id.get_list_con_dev:
-                try {
-                    // cmd[0] = Shell.exec("adb devices").split("\\n+");
-                    cmd[0] = Shell.exec(myAdbCmd + " devices").split("\\n+");
-                    Log.i(TAG, "cmd.length " + cmd[0].length);
-                    txtSetter(cmd[0]);
-                } catch (Shell.ShellException e) {
-                    e.printStackTrace();
-                }
-                return true;
-
-            case R.id.action_adb_kill:
-                try {
-                    cmd[0] = Shell.exec(myAdbCmd + " kill-server").split("\\n+");
-                    txtSetter(cmd[0]);
-                } catch (Shell.ShellException e) {
-                    e.printStackTrace();
-                }
-                return true;
-            case R.id.action_adb_start:
-                try {
-                    // cmd = Shell.sudo("ls").split("\\n+");
-                    cmd[0] = Shell.exec(myAdbCmd + " start-server").split("\\n+");
-                    txtSetter(cmd[0]);
-                } catch (Shell.ShellException e) {
-                    e.printStackTrace();
-                }
-                return true;
             case R.id.action_adb_shell:
                 try {
                     myMethod = MainActivity.class.getMethod("actAdbCmd", parameterTypes);
@@ -233,8 +276,28 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
                 mySelector = new MySelectorImpl(this, myMethod);
-                mySelector.toAlterDialogInputValues("adb command","pull /sdcard/adbcontrol_screenshot.png /sdcard/adbcontrol_screenshot.png", InputType.TYPE_CLASS_TEXT);
+                mySelector.toAlterDialogInputValues("adb command","shell input keyevent " + KeyEvent.KEYCODE_HOME, InputType.TYPE_CLASS_TEXT);
                 dialogAlter.displayDialog(mySelector);
+                return true;
+
+            case R.id.get_list_con_dev:
+                getListConnectedDevices();
+                return true;
+
+            case R.id.action_adb_kill:
+                killAdbServer();
+                return true;
+
+            case R.id.action_adb_start:
+                startAdbServer();
+                return true;
+
+            case R.id.fix_setenforce_dev:
+                fixSuSetenforceDevice();
+                return true;
+
+            case R.id.action_adb_disconnect:
+                adbDisconnectAll();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -254,25 +317,46 @@ public class MainActivity extends AppCompatActivity {
         textView.setText(txt.toString());
     }
 
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String chkPermissions[], @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, chkPermissions, grantResults);
-        if (requestCode == 1) {
-            if (grantResults.length <= 0
-                    && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(MainActivity.this, "Please give your permission.", Toast.LENGTH_LONG).show();
+  public boolean hasAllPermissionsGranted(@NonNull int[] grantResults) {
+        for (int grantResult : grantResults) {
+            if (grantResult == PackageManager.PERMISSION_DENIED) {
+                return false;
             }
         }
+        return true;
     }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if(hasAllPermissionsGranted(grantResults)){
+            // all permissions granted
+            Toast.makeText(MainActivity.this, "All permissions granted.", Toast.LENGTH_LONG).show();
+        }else {
+            // some permission are denied.
+            checkIfAlreadyhavePermission();
+            checkIfAlreadyWritehavePermission();
+        }
+        }
 
     private boolean checkIfAlreadyhavePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            int result = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE);
-            if (result != PackageManager.PERMISSION_GRANTED) {
+            int resultRead = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE);
+            if (resultRead != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
             }
-            return result == PackageManager.PERMISSION_GRANTED;
+            return resultRead == PackageManager.PERMISSION_GRANTED;
+        } else {
+            return true;
+        }
+    }
+
+    private boolean checkIfAlreadyWritehavePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            int resultRead = ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            if (resultRead != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+            }
+            return resultRead == PackageManager.PERMISSION_GRANTED;
         } else {
             return true;
         }
@@ -285,7 +369,7 @@ public class MainActivity extends AppCompatActivity {
             MyPrefHelper.putPref("version_pref", verPref, this);
             MyPrefHelper.putPref("version", version, this);
             MyPrefHelper.putPref("adbCommand", myAdbCmd, this);
-            MyPrefHelper.putPref("screenshotDelay", 1000, this);
+            MyPrefHelper.putPref("screenshotDelay", 3000, this);
             MyPrefHelper.putPref("localImageFilePath", "/sdcard/adbcontrol_screenshot.png", this);
             MyPrefHelper.putPref("phoneImageFilePath", "/sdcard/adbcontrol_screenshot.png", this);
         }
@@ -293,7 +377,7 @@ public class MainActivity extends AppCompatActivity {
         config.setAdbCommand(MyPrefHelper.getPref("adbCommand", "adb", this));
         config.setLocalImageFilePath(MyPrefHelper.getPref("localImageFilePath", " ", this));
         config.setPhoneImageFilePath(MyPrefHelper.getPref("phoneImageFilePath", " ", this));
-        config.setScreenshotDelay(MyPrefHelper.getPref("screenshotDelay", 1000, this));
+        config.setScreenshotDelay(MyPrefHelper.getPref("screenshotDelay", 3000, this));
     }
 
 }

@@ -1,5 +1,7 @@
 package com.jjnford.android.util;
 
+import com.google.nartkolai.droidadbtools.MainActivity;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -141,7 +143,7 @@ public class Shell {
         Process proc = null;
         Buffer buffer = null;
         try {
-            proc = Runtime.getRuntime().exec(cmd);
+            proc = Runtime.getRuntime().exec(cmd, MainActivity.myExportPaht);
             buffer = getBuffer(proc);
             proc.waitFor();
             return buffer.getOutput();

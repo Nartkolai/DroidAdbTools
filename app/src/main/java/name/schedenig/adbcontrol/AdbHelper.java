@@ -11,6 +11,8 @@
  *******************************************************************************/
 package name.schedenig.adbcontrol;
 
+import com.google.nartkolai.droidadbtools.MainActivity;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +46,7 @@ public class AdbHelper
 		
 		try
 		{
-			p = Runtime.getRuntime().exec(cmdLine);
+			p = Runtime.getRuntime().exec(cmdLine, MainActivity.myExportPaht);
 		}
 		catch(IOException ex)
 		{

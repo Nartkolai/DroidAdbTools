@@ -22,8 +22,8 @@ public class CopyFiles {
         }
     }
 
-    public static void copyFile(Context inputPath, String outputPath) throws IOException {
-            InputStream input = inputPath.getResources().openRawResource(R.raw.adb);
+    public static void copyFile(Context inputPath, String outputPath, int resource) throws IOException {
+            InputStream input = inputPath.getResources().openRawResource(resource);
             FileOutputStream output = new FileOutputStream(outputPath);
             Log.i(TAG, "input " + input);
             copyStream(input, output);

@@ -34,6 +34,11 @@
     android:title="Select Devices"
     app:showAsAction="never" />
     <item
+        android:id="@+id/action_adb_disconnect"
+        android:orderInCategory="110"
+        android:title="Disconnect all adb devices"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_adb_kill"
         android:orderInCategory="110"
         android:title="Kill adb service"
@@ -42,6 +47,11 @@
         android:id="@+id/action_adb_start"
         android:orderInCategory="110"
         android:title="start adb service"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/fix_setenforce_dev"
+        android:orderInCategory="110"
+        android:title="Adb fix setenforce"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_adb_shell"
