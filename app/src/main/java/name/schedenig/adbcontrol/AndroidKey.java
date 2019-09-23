@@ -13,7 +13,7 @@ package name.schedenig.adbcontrol;
 
 public enum AndroidKey
 {
-	MENU(1),
+//	MENU(1),
 	HOME(3),
 	BACK(4),
 	DPAD_UP(19),
@@ -37,7 +37,7 @@ public enum AndroidKey
 	ENTER(66),
 	DEL(67),
 	FOCUS(80),
-	//MENU(82),
+	MENU(82),
 	NOTIFICATION(83),
 	SEARCH(84);
 	

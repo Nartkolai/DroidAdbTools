@@ -24,7 +24,7 @@ public class DialogAlter {
         final EditText input = new EditText(context);
         final AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(mySel.getTilts());
-        if (mySel.getNeedInput()) {
+        if (mySel.getNeedInput()) { // Creating a dialog box with a field for entering values
             input.setInputType(mySel.getInputType());
             input.setText(mySel.getText());
             input.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
@@ -50,7 +50,7 @@ public class DialogAlter {
                     dialog.cancel();
                 }
             });
-        }else {
+        }else if(list != null && !mySel.getNeedInput()){ //Creating a dialog to select a value from a list
             builder.setPositiveButton(context.getResources().getString(android.R.string.cancel), null);
             builder.setItems(list, new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int position) {
@@ -66,10 +66,43 @@ public class DialogAlter {
                     }
                 }
             });
+        }else { //Create confirmation dialog
+            builder.setTitle(mySel.getTilts());
+            builder.setMessage(mySel.getText());
+            builder.setPositiveButton(context.getResources().getString(android.R.string.ok), new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Object[] parameters = new Object[1];
+                    parameters[0] = "YES";
+                    try {
+                        mySel.getMethod().invoke(mySel.getObject(), parameters);
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    } catch (InvocationTargetException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+            builder.setNegativeButton(context.getResources().getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Object[] parameters = new Object[1];
+                    parameters[0] = "NO";
+                    try {
+                        mySel.getMethod().invoke(mySel.getObject(), parameters);
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    } catch (InvocationTargetException e) {
+                        e.printStackTrace();
+                    }
+                    dialog.cancel();
+                }
+            });
+
         }
         builder.create();
         final AlertDialog alertDialog = builder.create();
-        if (!mySel.getNeedInput()){
+        if (!mySel.getNeedInput() && mySel.getItemList() != null){// Creating a confirmation dialog box after a long click on an item
             alertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
                 @Override
                 public void onShow(DialogInterface dialog) {
@@ -77,6 +110,7 @@ public class DialogAlter {
                     lv.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
                         @Override
                         public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+                            assert list != null;
                             builder.setTitle(mySel.getSubTilts() + "\n" + list[position]);
                             builder.setItems(null, null);
                             builder.setPositiveButton(context.getResources().getString(android.R.string.ok),

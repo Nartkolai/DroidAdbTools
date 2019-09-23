@@ -143,7 +143,7 @@ public class Shell {
         Process proc = null;
         Buffer buffer = null;
         try {
-            proc = Runtime.getRuntime().exec(cmd, MainActivity.myExportPaht);
+            proc = Runtime.getRuntime().exec(cmd, MainActivity.myExportPath);
             buffer = getBuffer(proc);
             proc.waitFor();
             return buffer.getOutput();

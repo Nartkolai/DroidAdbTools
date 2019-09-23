@@ -7,11 +7,15 @@
     android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
     tools:context=".ScreenActivity">
 
-
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="wrap_content"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         android:adjustViewBounds="true"
-        tools:ignore="MissingConstraints" />
+        android:background="#1E1E8A"
+        android:contentDescription="@string/screenshot"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 </android.support.constraint.ConstraintLayout>

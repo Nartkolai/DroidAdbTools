@@ -84,6 +84,11 @@ public class MySelectorImpl implements MySelector{
         return input;
     }
 
+    /**
+     * @param tilts     window title of the selected item
+     * @param text      default text in the input field
+     * @param inputType change the way you enter values
+     */
     @Override
     public void toAlterDialogInputValues(String tilts, String text, int inputType){
         this.tilts = tilts;
@@ -91,11 +96,29 @@ public class MySelectorImpl implements MySelector{
         this.inputType = inputType;
         this.input = true;
     }
+
+    /**
+     * @param tilts    window title of the selected item
+     * @param subTilts window title of the selected item
+     * @param list     list of processed items
+     */
     @Override
     public void toAlterDialogListItem(String tilts, String subTilts, String[] list){
         this.tilts = tilts;
         this.subTilts = subTilts;
         this.list = list;
+        this.input = false;
+    }
+
+    /**
+     * @param tilts window title of the selected item
+     * @param text  action description text
+     */
+    @Override
+    public void toAlterDialogNoItem(String tilts, String text){
+        this.list = null;
+        this.tilts = tilts;
+        this.text = text;
         this.input = false;
     }
 }

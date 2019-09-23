@@ -11,3 +11,7 @@ Source of answers: [Stack Overflow](https://stackoverflow.com/)
 This version of the application only works with the built-in "adb" binary file. In android version 6 and above, the built-in "adb" system is missing, so the program will not work with the remote device.
 
 In order for the program to work in the version of android 6 and more, it is necessary to create the “adb” folder in the root “sdcard” into which the binaries “adb” and “libcrypto.so” should be copied.
+
+*"application.properties":* 
+>USER_HOME=/home/ </p>
+>VERSION_CODE=0

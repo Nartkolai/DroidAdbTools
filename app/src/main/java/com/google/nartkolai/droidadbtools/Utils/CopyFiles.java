@@ -3,8 +3,6 @@ package com.google.nartkolai.droidadbtools.Utils;
 import android.content.Context;
 import android.util.Log;
 
-import com.google.nartkolai.droidadbtools.R;
-
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;

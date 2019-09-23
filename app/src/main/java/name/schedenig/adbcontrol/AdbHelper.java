@@ -46,7 +46,7 @@ public class AdbHelper
 		
 		try
 		{
-			p = Runtime.getRuntime().exec(cmdLine, MainActivity.myExportPaht);
+			p = Runtime.getRuntime().exec(cmdLine, MainActivity.myExportPath);
 		}
 		catch(IOException ex)
 		{

@@ -51,6 +51,7 @@ public interface MySelector {
      Object getObject();
 
      /**
+      * Minimum parameters to build dialog box with a field for entering values
       * @param tilts window title of the selected item
       * @param text default text in the input field
       * @param inputType change the way you enter values
@@ -58,9 +59,17 @@ public interface MySelector {
      void toAlterDialogInputValues(String tilts, String text, int inputType);
 
      /**
+      * Minimum parameters to build dialog to select a value from a list
       * @param tilts window title of the selected item
       * @param subTilts window title of the selected item
       * @param list list of processed items
       */
      void toAlterDialogListItem(String tilts, String subTilts, String[] list);
+
+     /**
+      * Minimum parameters to build confirmation dialog
+      * @param tilts window title of the selected item
+      * @param text action description text
+      */
+     void toAlterDialogNoItem(String tilts, String text);
 }
