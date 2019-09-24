@@ -16,4 +16,7 @@
     <string name="adb_shell">Adb shell</string>
     <string name="menu">Menu</string>
     <string name="power">Power</string>
+    <string name="show_swipe_zone">Show swipe zone</string>
+    <string name="resize_swipe_zone">Resize swipe zone</string>
+    <string name="set_swipe_zone">Set swipe zone</string>
 </resources>

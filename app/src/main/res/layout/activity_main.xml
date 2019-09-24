@@ -11,13 +11,12 @@
         android:layout_marginBottom="2dp"/>
 
     <Button
-        android:id="@+id/screen_activity"
+        android:id="@+id/btn_screen_activity"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/screen_activity"
         android:layout_marginBottom="5dp"
-        android:height="35dp"
-        android:onClick="onStartScreenActivity" />
+        android:height="35dp" />
 
     <ScrollView
         android:layout_width="match_parent"

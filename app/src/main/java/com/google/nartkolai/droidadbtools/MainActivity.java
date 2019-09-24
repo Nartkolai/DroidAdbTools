@@ -17,6 +17,7 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,6 +35,7 @@ import java.lang.reflect.Method;
 import name.schedenig.adbcontrol.Config;
 
 public class MainActivity extends AppCompatActivity {
+    static boolean debugUi = false;
     String[] cmd;
     private FsUtil fsUtil;
     private DialogAlter dialogAlter;
@@ -67,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
         dialogAlter = new DialogAlter(this);
         textView = findViewById(R.id.out_text);
         tvIp = findViewById(R.id.txt_current_ip);
+        Button btnStartScreenActiv = findViewById(R.id.btn_screen_activity);
         textView.setText(outText);
         tvIp.setText(useIpAdrDev);
         String fileName = "ipAdrDev";
@@ -75,6 +78,21 @@ public class MainActivity extends AppCompatActivity {
         initParam();
         chkConfig();
         chkStartAdb();
+        btnStartScreenActiv.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                debugUi = false;
+                onStartScreenActivity();
+            }
+        });
+        btnStartScreenActiv.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                debugUi = true;
+                onStartScreenActivity();
+                return false;
+            }
+        });
     }
 
     @Override
@@ -119,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    public void onStartScreenActivity(View view) {
+     void onStartScreenActivity() {
         if ((checkIfAlreadyWritehavePermission() && checkIfAlreadyhavePermission() /*&& checkWriteSettingsPermission()*/) || Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP_MR1) {
             startActivity(new Intent(this, ScreenActivity.class));
         } else {
@@ -446,6 +464,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
+    //Todo Get permission implement auto-reversal device.
 //    public boolean checkWriteSettingsPermission() {
 //        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 //            if (!Settings.System.canWrite(getApplicationContext())) {
