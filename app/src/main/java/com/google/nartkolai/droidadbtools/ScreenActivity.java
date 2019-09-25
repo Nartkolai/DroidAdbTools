@@ -6,8 +6,14 @@ import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.RequiresApi;
@@ -142,6 +148,9 @@ public class ScreenActivity extends AppCompatActivity {
      */
     private void loadImage() {
         myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+        if (myBitmap == null) {
+            myBitmap = makeStubBitmap();
+        }
         imageView = findViewById(R.id.imageView);
         if (apiOs < Build.VERSION_CODES.M) {
             switch (getAdbOrientation()) {
@@ -160,6 +169,23 @@ public class ScreenActivity extends AppCompatActivity {
         finalHeight = imageView.getMeasuredHeight();
         finalWidth = imageView.getMeasuredWidth();
         setOrientation(myBitmap.getWidth(), myBitmap.getHeight());
+    }
+
+    Bitmap makeStubBitmap() {
+        Bitmap bitmap = Bitmap.createBitmap(this.getResources().getDisplayMetrics().widthPixels, this.getResources().getDisplayMetrics().heightPixels, Bitmap.Config.ARGB_8888);
+        int color = Color.parseColor("#463F3F");
+        Paint paint = new Paint();
+        Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+        RectF rectF = new RectF(rect);
+        float roundPx = 12;
+        Canvas canvas = new Canvas(bitmap);
+        paint.setAntiAlias(true);
+        canvas.drawARGB(0, 0, 0, 0);
+        paint.setColor(color);
+        canvas.drawRoundRect(rectF, roundPx, roundPx, paint);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+        canvas.drawBitmap(bitmap, rect, rect, paint);
+        return bitmap;
     }
 
     /**
