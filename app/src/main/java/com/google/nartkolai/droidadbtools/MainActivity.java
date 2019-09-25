@@ -2,6 +2,7 @@ package com.google.nartkolai.droidadbtools;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -36,9 +37,11 @@ import name.schedenig.adbcontrol.Config;
 
 public class MainActivity extends AppCompatActivity {
     static boolean debugUi = false;
-    String[] cmd;
+    static int apiOs;
+    private String[] cmd;
     private FsUtil fsUtil;
-    private DialogAlter dialogAlter;
+    private DialogAlter dialogAlterBuilder;
+    private AlertDialog dialogAlterShow;
     private TextView textView, tvIp;
     private boolean adbStatStop = true;
     private boolean initP;
@@ -66,7 +69,8 @@ public class MainActivity extends AppCompatActivity {
             useIpAdrDev = savedInstanceState.getString("useIpAdrDev");
         }
         setContentView(R.layout.activity_main);
-        dialogAlter = new DialogAlter(this);
+        dialogAlterBuilder = new DialogAlter(this);
+        dialogAlterShow = new DialogAlter(this);
         textView = findViewById(R.id.out_text);
         tvIp = findViewById(R.id.txt_current_ip);
         Button btnStartScreenActiv = findViewById(R.id.btn_screen_activity);
@@ -81,18 +85,30 @@ public class MainActivity extends AppCompatActivity {
         btnStartScreenActiv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                debugUi = false;
-                onStartScreenActivity();
+                if(getApiOs() > 0) {
+                    debugUi = false;
+                    apiOs = getApiOs();
+                    onStartScreenActivity();
+                }
             }
         });
         btnStartScreenActiv.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
+                apiOs = Build.VERSION_CODES.M;
                 debugUi = true;
                 onStartScreenActivity();
                 return false;
             }
         });
+    }
+
+    @Override
+    protected void onDestroy(){
+        super.onDestroy();
+        if (dialogAlterShow !=null && dialogAlterShow.isShowing()){
+            dialogAlterShow.dismiss();
+        }
     }
 
     @Override
@@ -137,6 +153,9 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
+    /**
+     * Start Screen Activity
+     */
      void onStartScreenActivity() {
         if ((checkIfAlreadyWritehavePermission() && checkIfAlreadyhavePermission() /*&& checkWriteSettingsPermission()*/) || Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP_MR1) {
             startActivity(new Intent(this, ScreenActivity.class));
@@ -149,7 +168,6 @@ public class MainActivity extends AppCompatActivity {
      * Adb binary file removed from android version more LOLLIPOP_MR1
      */
     void selectAdbCmdAndCopyBinFiles() {
-
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1) {
             myAdbCmd = myPath + "/bin/./adb";
             myExportPath = new String[]{"LD_LIBRARY_PATH=$LD_LIBRARY_PATH:" + myPath + "/lib"};
@@ -323,7 +341,8 @@ public class MainActivity extends AppCompatActivity {
                 }
                 mySelector = new MySelectorImpl(this, myMethod);
                 mySelector.toAlterDialogInputValues("Delay Screen", String.valueOf(config.getScreenshotDelay()), (InputType.TYPE_NUMBER_FLAG_SIGNED | InputType.TYPE_CLASS_NUMBER));
-                dialogAlter.displayDialog(mySelector);
+                dialogAlterShow = dialogAlterBuilder.displayDialog(mySelector);
+                dialogAlterShow.show();
                 return true;
             // Add devices
             case R.id.action_add_dev:
@@ -334,7 +353,8 @@ public class MainActivity extends AppCompatActivity {
                 }
                 mySelector = new MySelectorImpl(this, myMethod);
                 mySelector.toAlterDialogInputValues("Add IP devices", "192.168.", (InputType.TYPE_NUMBER_FLAG_SIGNED | InputType.TYPE_NUMBER_VARIATION_NORMAL));
-                dialogAlter.displayDialog(mySelector);
+                dialogAlterShow = dialogAlterBuilder.displayDialog(mySelector);
+                dialogAlterShow.show();
                 return true;
             // Select devices
             case R.id.action_select_dev:
@@ -348,7 +368,8 @@ public class MainActivity extends AppCompatActivity {
                 }
                 mySelector = new MySelectorImpl(this, myMethod);
                 mySelector.toAlterDialogListItem("Select IP devices", "Delete select devices", list);
-                dialogAlter.displayDialog(mySelector);
+                dialogAlterShow = dialogAlterBuilder.displayDialog(mySelector);
+                dialogAlterShow.show();
                 return true;
             //Send adb shell command
             case R.id.action_adb_shell:
@@ -359,7 +380,8 @@ public class MainActivity extends AppCompatActivity {
                 }
                 mySelector = new MySelectorImpl(this, myMethod);
                 mySelector.toAlterDialogInputValues("adb command", "shell input keyevent " + KeyEvent.KEYCODE_HOME, InputType.TYPE_CLASS_TEXT);
-                dialogAlter.displayDialog(mySelector);
+                dialogAlterShow = dialogAlterBuilder.displayDialog(mySelector);
+                dialogAlterShow.show();
                 return true;
 
             // Get list connected devices
@@ -427,8 +449,6 @@ public class MainActivity extends AppCompatActivity {
             // all permissions granted
             Toast.makeText(MainActivity.this, "All permissions granted.", Toast.LENGTH_LONG).show();
         } else {
-            // some permission are denied.
-           // checkWriteSettingsPermission();
             checkIfAlreadyhavePermission();
             checkIfAlreadyWritehavePermission();
         }
@@ -464,22 +484,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-    //Todo Get permission implement auto-reversal device.
-//    public boolean checkWriteSettingsPermission() {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-//            if (!Settings.System.canWrite(getApplicationContext())) {
-//                Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS,
-//                        Uri.parse("package:" + getPackageName()));
-//                Intent myIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
-//                startActivity(myIntent);
-//                startActivity(intent);
-//                return false;
-//            }
-//        }
-//        return true;
-//    }
-
     /**
      * Check preferences, and init config
      */
@@ -511,6 +515,30 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * Obtaining an OS version for further work with a screenshot. In API versions below 22, screenshots on ADB are taken without reference to screen orientation.
+     * @return OS version API
+     */
+    int getApiOs(){
+        int api = 0;
+        try {
+            cmd = Shell.exec(myAdbCmd + " shell getprop ro.build.version.sdk ").split("\\n+");
+        } catch (Shell.ShellException e) {
+            e.printStackTrace();
+        }
+        try {
+            api = Integer.valueOf(cmd[0]);
+        }catch (Exception e){
+            Log.e(TAG,"" + e);
+            MySelectorImpl mySelector;
+            mySelector = new MySelectorImpl(this, null);
+            mySelector.toAlterDialogNoItem("Error", "Error selecting device. More than one device/emulator.");
+            dialogAlterShow = dialogAlterBuilder.displayDialog(mySelector);
+            dialogAlterShow.show();
+        }
+        return api;
     }
 
     @Override

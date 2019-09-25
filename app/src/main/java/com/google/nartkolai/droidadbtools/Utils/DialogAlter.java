@@ -12,14 +12,16 @@ import android.widget.ListView;
 import java.lang.reflect.InvocationTargetException;
 
 
-public class DialogAlter {
+public class DialogAlter extends AlertDialog{
     private Context context;
+    private AlertDialog alertDialog;
 
     public DialogAlter(Context context){
-       this.context = context;
+        super(context);
+        this.context = context;
     }
 
-    public void displayDialog(final MySelectorImpl mySel) {
+    public AlertDialog displayDialog(final MySelectorImpl mySel) {
         final String[] list = mySel.getItemList();
         final EditText input = new EditText(context);
         final AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -72,36 +74,40 @@ public class DialogAlter {
             builder.setPositiveButton(context.getResources().getString(android.R.string.ok), new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    Object[] parameters = new Object[1];
-                    parameters[0] = "YES";
-                    try {
-                        mySel.getMethod().invoke(mySel.getObject(), parameters);
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                    } catch (InvocationTargetException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-            builder.setNegativeButton(context.getResources().getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    Object[] parameters = new Object[1];
-                    parameters[0] = "NO";
-                    try {
-                        mySel.getMethod().invoke(mySel.getObject(), parameters);
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                    } catch (InvocationTargetException e) {
-                        e.printStackTrace();
+                    if (mySel.getMethod() != null) {
+                        Object[] parameters = new Object[1];
+                        parameters[0] = "YES";
+                        try {
+                            mySel.getMethod().invoke(mySel.getObject(), parameters);
+                        } catch (IllegalAccessException e) {
+                            e.printStackTrace();
+                        } catch (InvocationTargetException e) {
+                            e.printStackTrace();
+                        }
                     }
                     dialog.cancel();
                 }
             });
-
+            if (mySel.getMethod() != null) {
+                builder.setNegativeButton(context.getResources().getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Object[] parameters = new Object[1];
+                        parameters[0] = "NO";
+                        try {
+                            mySel.getMethod().invoke(mySel.getObject(), parameters);
+                        } catch (IllegalAccessException e) {
+                            e.printStackTrace();
+                        } catch (InvocationTargetException e) {
+                            e.printStackTrace();
+                        }
+                        dialog.cancel();
+                    }
+                });
+            }
         }
         builder.create();
-        final AlertDialog alertDialog = builder.create();
+        alertDialog = builder.create();
         if (!mySel.getNeedInput() && mySel.getItemList() != null){// Creating a confirmation dialog box after a long click on an item
             alertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
                 @Override
@@ -146,6 +152,6 @@ public class DialogAlter {
                 }
             });
         }
-        alertDialog.show();
+        return alertDialog;
     }
 }

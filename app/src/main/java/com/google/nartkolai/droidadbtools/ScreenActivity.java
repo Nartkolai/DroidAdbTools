@@ -3,9 +3,11 @@ package com.google.nartkolai.droidadbtools;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.RequiresApi;
@@ -17,7 +19,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -30,6 +31,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.nartkolai.droidadbtools.Utils.MyPrefHelper;
+import com.jjnford.android.util.Shell;
 
 import java.io.File;
 
@@ -43,11 +45,16 @@ public class ScreenActivity extends AppCompatActivity {
     private static String TAG = "ScreenActivity";
     private File file;
     private Config config;
-    protected Thread updateThread;
+    private Thread updateThread;
     private AdbHelper adbHelper;
     private static int screenWidth;
-    float finalHeight, finalWidth, deltaX, deltaY;
-    int screenUpY = 0, screenDownX = 0, screenUpX = 0, screenDownY = 0, xMove, xDown;
+    private float finalHeight;
+    private float finalWidth;
+    private int screenDownX = 0;
+    private int screenDownY = 0;
+    private int xMove;
+    private int xDown;
+    private int yDown;
     private ImageView imageView;
     private Bitmap myBitmap;
     private int swipeZoneSize = 50; //dpi
@@ -58,6 +65,7 @@ public class ScreenActivity extends AppCompatActivity {
     private boolean showSwipeZone = true;
     private CheckBox checkBoxShowSZ;
     private Context context;
+    private int apiOs = MainActivity.apiOs;
 
     @SuppressLint("ClickableViewAccessibility")
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
@@ -86,7 +94,7 @@ public class ScreenActivity extends AppCompatActivity {
     /**
      * Stop the thread of image acquisition
      */
-    protected void stopUpdateThread() {
+    private void stopUpdateThread() {
         if (updateThread != null) {
             updateThread.interrupt();
             updateThread = null;
@@ -96,7 +104,7 @@ public class ScreenActivity extends AppCompatActivity {
     /**
      * Start the thread of image acquisition
      */
-    protected void startUpdateThread() {
+    private void startUpdateThread() {
         if (updateThread == null) {
             updateThread = new Thread() {
                 @Override
@@ -128,44 +136,80 @@ public class ScreenActivity extends AppCompatActivity {
         loadImage();
     }
 
+
     /**
      * Load image and get its size
      */
     private void loadImage() {
-        imageView = findViewById(R.id.imageView);
         myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
-        imageView.setImageBitmap(myBitmap);
-        ViewTreeObserver vto = imageView.getViewTreeObserver();
-        vto.addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
-            public boolean onPreDraw() {
-                imageView.getViewTreeObserver().removeOnPreDrawListener(this);
-                finalHeight = imageView.getMeasuredHeight();
-                finalWidth = imageView.getMeasuredWidth();
-                //Todo To implement auto-reversal device.
-//                if(finalHeight < finalWidth){
-//                    //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-//                    setOrientation(1);
-//                }else {
-//                    setOrientation(0);
-//                    //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-//                }
-                return true;
+        imageView = findViewById(R.id.imageView);
+        if (apiOs < Build.VERSION_CODES.M) {
+            switch (getAdbOrientation()) {
+                case 1:
+                    myBitmap = rotateBitmap(myBitmap, 270);
+                    break;
+                case 2:
+                    myBitmap = rotateBitmap(myBitmap, 180);
+                    break;
+                case 3:
+                    myBitmap = rotateBitmap(myBitmap, 90);
+                    break;
             }
-        });
+        }
+        imageView.setImageBitmap(myBitmap);
+        finalHeight = imageView.getMeasuredHeight();
+        finalWidth = imageView.getMeasuredWidth();
+        setOrientation(myBitmap.getWidth(), myBitmap.getHeight());
     }
 
-//    public void setOrientation( int i)
-//    {
-//        Settings.System.putInt(getContentResolver(), Settings.System.USER_ROTATION, i);
-//    }
+    /**
+     * @param source Input image
+     * @param angle  Image rotation angle
+     * @return Inverted image
+     */
+    private Bitmap rotateBitmap(Bitmap source, float angle) {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(angle);
+        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
+    }
+
+    /**
+     * Change the orientation of the control device
+     *
+     * @param width  Input image width
+     * @param height Input image height
+     */
+    private void setOrientation(int width, int height) {
+        if (width > height) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        } else {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        }
+    }
+
+    /**
+     * @return Current orientation of the managed device
+     */
+    private int getAdbOrientation() {
+        String[] cmd = null;
+        try {
+            cmd = Shell.exec(config.getAdbCommand() + " shell dumpsys input | grep SurfaceOrientation").split("\\n+");
+        } catch (Shell.ShellException e) {
+            e.printStackTrace();
+        }
+        assert cmd != null;
+        String i = cmd[0].substring(cmd[0].length() - 1);
+        Log.i(TAG, "getAdbOrientation " + i);
+        return Integer.valueOf(i);
+    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 
         float myBitmapWidth = myBitmap.getWidth();
         float myBitmapHeight = myBitmap.getHeight();
-        deltaX = myBitmapWidth / finalWidth;
-        deltaY = myBitmapHeight / finalHeight;
+        float deltaX = myBitmapWidth / finalWidth;
+        float deltaY = myBitmapHeight / finalHeight;
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_MOVE:
@@ -173,15 +217,21 @@ public class ScreenActivity extends AppCompatActivity {
                 break;
             case MotionEvent.ACTION_DOWN:
                 xDown = (int) event.getX();
+                yDown = (int) event.getY();
                 screenDownX = (int) (event.getX() * deltaX);
                 screenDownY = (int) (event.getY() * deltaY);
                 break;
             case MotionEvent.ACTION_UP:
-                screenUpX = (int) (event.getX() * deltaX);
-                screenUpY = (int) (event.getY() * deltaY);
-                int dy = Math.abs(screenDownY - screenUpY);
-                Log.i(TAG, "screenWidth " + screenWidth + " (int (swipeZoneSize) " + (int) convertDpToPixel(swipeZoneSize, this));
-                if ((dy <= 15) && (xMove != 0) && (xDown > (screenWidth - (int) convertDpToPixel(swipeZoneSize, this)))) {// Select the swipe zone
+                int screenUpX = (int) (event.getX() * deltaX);
+                int screenUpY = (int) (event.getY() * deltaY);
+                int dx = Math.abs(xDown - (int) event.getX());
+                int dy = Math.abs(yDown - (int) event.getY());
+//                Log.i(TAG, "--------------------------------------------------------");
+//                Log.i(TAG, "myBitmapWidth " + myBitmapWidth + " myBitmapHeight " + myBitmapHeight);
+//                Log.i(TAG, "screenWidth " + screenWidth + " swipeZoneSize " + (int) convertDpToPixel(swipeZoneSize, this));
+//                Log.i(TAG, "xMove " + xMove + " dx " + dx + " dy " + dy);
+
+                if ((dy < dx) && dx > 50 && xMove != 0 && (xDown > (screenWidth - (int) convertDpToPixel(swipeZoneSize, this)))) {// Select the swipe zone
                     xMove = 0;
                     showButtonPanelView();
                 } else {
@@ -194,10 +244,11 @@ public class ScreenActivity extends AppCompatActivity {
 
     /**
      * The handler will select the coordinates of the swipe from the touches, and transfer it for execution
+     *
      * @param screenDownX coordinate reduced to the screen size of the managed device
      * @param screenDownY coordinate reduced to the screen size of the managed device
-     * @param screenUpX coordinate reduced to the screen size of the managed device
-     * @param screenUpY coordinate reduced to the screen size of the managed device
+     * @param screenUpX   coordinate reduced to the screen size of the managed device
+     * @param screenUpY   coordinate reduced to the screen size of the managed device
      */
     void touchHandler(int screenDownX, int screenDownY, int screenUpX, int screenUpY) {
         float screenWidth = myBitmap.getWidth();
@@ -205,18 +256,17 @@ public class ScreenActivity extends AppCompatActivity {
         int dx = Math.abs(screenDownX - screenUpX);
         int dy = Math.abs(screenDownY - screenUpY);
         if (screenWidth >= screenUpX && screenHeight >= screenUpY) {
+            Log.i(TAG, "move UpX " + screenUpX + ", UpY " + screenUpY);
+            Log.i(TAG, "move DnX " + screenDownX + ", DnY " + screenDownY);
             if (dx < 5 && dy < 5) {
                 if (debugUi) {
                     Toast.makeText(ScreenActivity.this, " UpX " + screenUpX + ",  UpY " + screenUpY, Toast.LENGTH_SHORT).show();
-                    Log.i(TAG, "tap screenUpX " + screenUpX + ", screenUpY " + screenUpY);
                 } else {
                     adbHelper.sendClick(screenUpX, screenUpY);
                 }
             } else {
                 if (debugUi) {
                     Toast.makeText(ScreenActivity.this, "move UpX " + screenUpX + ", move DownX " + screenDownX, Toast.LENGTH_SHORT).show();
-                    Log.i(TAG, "move UpX " + screenUpX + ", UpY " + screenUpY);
-                    Log.i(TAG, "move DnX " + screenDownX + ", DnY " + screenDownY);
                 } else {
                     adbHelper.sendSwipe(screenDownX, screenDownY, screenUpX, screenUpY);
                 }
@@ -244,15 +294,14 @@ public class ScreenActivity extends AppCompatActivity {
             // Without this, after pressing volume buttons, the navigation bar will
             // show up and won't hide
             final View decorView = getWindow().getDecorView();
-            decorView
-                    .setOnSystemUiVisibilityChangeListener(new View.OnSystemUiVisibilityChangeListener() {
-                        @Override
-                        public void onSystemUiVisibilityChange(int visibility) {
-                            if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
-                                decorView.setSystemUiVisibility(flags);
-                            }
-                        }
-                    });
+            decorView.setOnSystemUiVisibilityChangeListener(new View.OnSystemUiVisibilityChangeListener() {
+                @Override
+                public void onSystemUiVisibilityChange(int visibility) {
+                    if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
+                        decorView.setSystemUiVisibility(flags);
+                    }
+                }
+            });
         }
     }
 
@@ -276,20 +325,17 @@ public class ScreenActivity extends AppCompatActivity {
     }
 
     /**
-     * Show Button bar/panel
+     * Show button bar/panel
      */
     @SuppressLint({"InflateParams"})
     void showButtonPanelView() {
-        if (panelViewButton == null) {
+        if (panelViewButton == null && panelViewSetSZ == null) {
             LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
             LayoutInflater inflater = getLayoutInflater();
             panelViewButton = inflater.inflate(R.layout.button_layout, null);
             panelViewButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    swipeZoneSize = MyPrefHelper.getPref("swipeZoneSize", swipeZoneSize, context);;
-                    resizeSwipeZone(swipeZoneSize);
-                    removeSetUpSwipeZonePanel();
                     removeButtonPanelView();
                 }
             });
@@ -317,6 +363,7 @@ public class ScreenActivity extends AppCompatActivity {
 
     /**
      * Show Swipe Zone
+     *
      * @param swipeZoneSize size of the swipe zone of the button bar call
      */
     void showSwipeZone(float swipeZoneSize) {
@@ -365,9 +412,18 @@ public class ScreenActivity extends AppCompatActivity {
     @SuppressLint({"InflateParams", "SetTextI18n"})
     void setUpSwipeZonePanel() {
         if (panelViewSetSZ == null) {
+            removeButtonPanelView();
             LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
             LayoutInflater inflater = getLayoutInflater();
             panelViewSetSZ = inflater.inflate(R.layout.set_swipe_zone_layout, null);
+            panelViewSetSZ.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    swipeZoneSize = MyPrefHelper.getPref("swipeZoneSize", swipeZoneSize, context);
+                    resizeSwipeZone(swipeZoneSize);
+                    removeSetUpSwipeZonePanel();
+                }
+            });
             addContentView(panelViewSetSZ, layoutParams);
 
             checkBoxShowSZ = findViewById(R.id.show_swipe_zone_check_box);
@@ -419,6 +475,7 @@ public class ScreenActivity extends AppCompatActivity {
 
     /**
      * Resize Swipe Zone
+     *
      * @param size new value swipe zone size
      * @return current value swipe zone size
      */
@@ -458,11 +515,6 @@ public class ScreenActivity extends AppCompatActivity {
         }
     }
 
-
-    public void keyeventPower(View view) {
-        sendKeyevent(AndroidKey.POWER);
-    }
-
     public void keyeventBack(View view) {
         sendKeyevent(AndroidKey.BACK);
     }
@@ -489,5 +541,4 @@ public class ScreenActivity extends AppCompatActivity {
         }
         removeButtonPanelView();
     }
-
 }

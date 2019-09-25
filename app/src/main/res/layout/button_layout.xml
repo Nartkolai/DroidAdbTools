@@ -26,25 +26,13 @@
             android:divider="@android:color/transparent">
 
             <Button
-                android:id="@+id/btn_power"
+                android:id="@+id/btn_set_swipe_zone"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
                 android:layout_alignParentTop="true"
                 android:layout_gravity="top"
                 android:layout_marginTop="8dp"
-                android:onClick="keyeventPower"
-                android:text="@string/power" />
-
-            <Button
-                android:id="@+id/btn_set_swipe_zone"
-                android:layout_width="100dp"
-                android:layout_height="30dp"
-                android:layout_below="@id/btn_power"
-                android:layout_gravity="top"
-                android:layout_marginTop="8dp"
-                android:text="@string/set_swipe_zone"
-                android:textSize="9sp"
-                tools:ignore="SmallSp" />
+                android:text="@string/set_swipe_zone" />
 
             <Button
                 android:id="@+id/back_button"
