@@ -3,7 +3,7 @@ package com.google.nartkolai.droidadbtools.Utils;
 
 import java.lang.reflect.Method;
 
-public class MySelectorImpl implements MySelector{
+public class AlterDialogSelectorImpl implements AlterDialogSelector {
     private String[] list = null;
     private String tilts = "";
     private String subTilts = "";
@@ -14,7 +14,7 @@ public class MySelectorImpl implements MySelector{
     private Method method;
 
 
-    public MySelectorImpl(Object object, Method method){
+    public AlterDialogSelectorImpl(Object object, Method method){
         this.object = object;
         this.method = method;
     }

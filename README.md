@@ -14,5 +14,5 @@ In order for the program to work in the version of android 6 and more, it is nec
  **Video: [Youtube](https://youtu.be/H-ziD5EttN8)**
 
 *"application.properties":* 
->USER_HOME=/home/ </p>
+>USER_HOME=/home/apk_copy_dir </p>
 >VERSION_CODE=0

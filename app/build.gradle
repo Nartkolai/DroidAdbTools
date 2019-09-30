@@ -19,7 +19,7 @@ android {
             versionCode code
             versionName "1.0"
         }
-    }else {
+    } else {
         throw new GradleException("Could not read application.properties!")
     }
 
@@ -39,19 +39,27 @@ dependencies {
 }
 
 
-
+/*Copy builds apk in folder*/
 project.afterEvaluate {
     android.applicationVariants.all { variant ->
-        variant.outputs.each { output ->
-            Properties appProps = new Properties()
-            appProps.load(new FileInputStream(file('application.properties')))
-
-            def outputDir = "${appProps['USER_HOME']}/Public/"
-            def outputFileName = "app-${variant.buildType.name}-v-${appProps['VERSION_CODE']}.apk"
-
-            variant.packageApplicationProvider.get().outputDirectory = new File("$outputDir")
-            output.outputFileName = outputFileName
+//        if (variant.buildType.name == 'release') {
+//                def inputDir = "${buildDir}/../${variant.buildType.name}/"
+        if (variant.buildType.name == 'debug') {
+            def inputDir = "${buildDir}/outputs/apk/${variant.buildType.name}/"
+            variant.outputs.all {
+                Properties appProps = new Properties()
+                appProps.load(new FileInputStream(file('application.properties')))
+                def newFileName = "app-${variant.buildType.name}-v-${appProps['VERSION_CODE']}.apk"
+                def outputDir = "${appProps['USER_HOME']}"
+                def inputFile = "app-${variant.buildType.name}.apk"
+                copy {
+                    from inputDir
+                    include inputFile
+                    into outputDir
+                    rename inputFile, newFileName
+                    println "APK FILES COPIED"
+                }
+            }
         }
     }
-    println "FILES COPIED"
 }

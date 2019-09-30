@@ -2,7 +2,7 @@ package com.google.nartkolai.droidadbtools.Utils;
 
 import java.lang.reflect.Method;
 
-public interface MySelector {
+public interface AlterDialogSelector {
 
      /**
       * @param list list of processed items

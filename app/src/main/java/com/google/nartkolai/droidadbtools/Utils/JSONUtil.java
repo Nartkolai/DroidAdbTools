@@ -16,11 +16,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 
-public class FsUtil {
+public class JSONUtil {
     private Context context;
     private String TAG = "FsUtil";
     private String fileName;
-    public FsUtil(Context context, String fileName){
+    public JSONUtil(Context context, String fileName){
         this.context = context;
         this.fileName = fileName;
     }

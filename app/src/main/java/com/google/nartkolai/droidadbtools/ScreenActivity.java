@@ -172,7 +172,9 @@ public class ScreenActivity extends AppCompatActivity {
     }
 
     Bitmap makeStubBitmap() {
-        Bitmap bitmap = Bitmap.createBitmap(this.getResources().getDisplayMetrics().widthPixels, this.getResources().getDisplayMetrics().heightPixels, Bitmap.Config.ARGB_8888);
+        int width = this.getResources().getDisplayMetrics().widthPixels;
+        int height = this.getResources().getDisplayMetrics().heightPixels;
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         int color = Color.parseColor("#463F3F");
         Paint paint = new Paint();
         Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
@@ -185,6 +187,13 @@ public class ScreenActivity extends AppCompatActivity {
         canvas.drawRoundRect(rectF, roundPx, roundPx, paint);
         paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
         canvas.drawBitmap(bitmap, rect, rect, paint);
+        paint.setTextSize(50);
+        paint.setColor(Color.GREEN);
+        String str = "Stub image";
+        paint.getTextBounds(str, 0, str.length(), rect);
+        int textWidth = rect.width();
+        int textHeight = rect.height();
+        canvas.drawText(str, (width >> 1) - textWidth/2, (height >> 1) - textHeight/2, paint);
         return bitmap;
     }
 
@@ -252,12 +261,7 @@ public class ScreenActivity extends AppCompatActivity {
                 int screenUpY = (int) (event.getY() * deltaY);
                 int dx = Math.abs(xDown - (int) event.getX());
                 int dy = Math.abs(yDown - (int) event.getY());
-//                Log.i(TAG, "--------------------------------------------------------");
-//                Log.i(TAG, "myBitmapWidth " + myBitmapWidth + " myBitmapHeight " + myBitmapHeight);
-//                Log.i(TAG, "screenWidth " + screenWidth + " swipeZoneSize " + (int) convertDpToPixel(swipeZoneSize, this));
-//                Log.i(TAG, "xMove " + xMove + " dx " + dx + " dy " + dy);
-
-                if ((dy < dx) && dx > 50 && xMove != 0 && (xDown > (screenWidth - (int) convertDpToPixel(swipeZoneSize, this)))) {// Select the swipe zone
+                if ((dy < dx) && dx > 50 && xMove != 0 && (xDown > (screenWidth - (int) convertDpToPixel(swipeZoneSize)))) {// Select the swipe zone
                     xMove = 0;
                     showButtonPanelView();
                 } else {
@@ -343,11 +347,10 @@ public class ScreenActivity extends AppCompatActivity {
      * {@link java.net.URL https://stackoverflow.com/questions/4605527/converting-pixels-to-dp}
      *
      * @param dp      A value in dp (density independent pixels) unit. Which we need to convert into pixels
-     * @param context Context to get resources and device specific display metrics
      * @return A float value to represent px equivalent to dp depending on device density
      */
-    public static float convertDpToPixel(float dp, Context context) {
-        return dp * ((float) context.getResources().getDisplayMetrics().densityDpi / DisplayMetrics.DENSITY_DEFAULT);
+    public float convertDpToPixel(float dp) {
+        return dp * ((float) getResources().getDisplayMetrics().densityDpi / DisplayMetrics.DENSITY_DEFAULT);
     }
 
     /**
@@ -399,7 +402,7 @@ public class ScreenActivity extends AppCompatActivity {
             linearLayoutSwZonMain.setGravity(Gravity.END);
             linearLayoutSwZonMain.setOrientation(LinearLayout.HORIZONTAL);
             // Add Separator
-            LinearLayout.LayoutParams llpViewSeparator = new LinearLayout.LayoutParams((int) convertDpToPixel(1f, this), LinearLayout.LayoutParams.MATCH_PARENT);
+            LinearLayout.LayoutParams llpViewSeparator = new LinearLayout.LayoutParams((int) convertDpToPixel(1f), LinearLayout.LayoutParams.MATCH_PARENT);
             LinearLayout linearLayoutSp = new LinearLayout(this);
             View viewSeparator = new View(this);
             viewSeparator.setClickable(false);
@@ -407,7 +410,7 @@ public class ScreenActivity extends AppCompatActivity {
             viewSeparator.setLayoutParams(llpViewSeparator);
             linearLayoutSp.addView(viewSeparator);
             // Add Separator Zone
-            LinearLayout.LayoutParams llpViewSeparatorZone = new LinearLayout.LayoutParams((int) convertDpToPixel(swipeZoneSize, this), LinearLayout.LayoutParams.MATCH_PARENT);
+            LinearLayout.LayoutParams llpViewSeparatorZone = new LinearLayout.LayoutParams((int) convertDpToPixel(swipeZoneSize), LinearLayout.LayoutParams.MATCH_PARENT);
             LinearLayout linearLayoutSZ = new LinearLayout(this);
             View viewSeparatorZone = new View(this);
             viewSeparatorZone.setBackgroundColor(Color.parseColor("#26000000"));

@@ -12,16 +12,16 @@ import android.widget.ListView;
 import java.lang.reflect.InvocationTargetException;
 
 
-public class DialogAlter extends AlertDialog{
+public class AlterDialogHelper extends AlertDialog{
     private Context context;
     private AlertDialog alertDialog;
 
-    public DialogAlter(Context context){
+    public AlterDialogHelper(Context context){
         super(context);
         this.context = context;
     }
 
-    public AlertDialog displayDialog(final MySelectorImpl mySel) {
+    public AlertDialog displayDialog(final AlterDialogSelectorImpl mySel) {
         final String[] list = mySel.getItemList();
         final EditText input = new EditText(context);
         final AlertDialog.Builder builder = new AlertDialog.Builder(context);
