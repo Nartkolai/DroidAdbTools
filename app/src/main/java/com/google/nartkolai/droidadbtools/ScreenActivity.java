@@ -71,7 +71,7 @@ public class ScreenActivity extends AppCompatActivity {
     private boolean showSwipeZone = true;
     private CheckBox checkBoxShowSZ;
     private Context context;
-    private int apiOs = MainActivity.apiOs;
+    private int sdkOs = MainActivity.sdkOs;
 
     @SuppressLint("ClickableViewAccessibility")
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
@@ -152,7 +152,7 @@ public class ScreenActivity extends AppCompatActivity {
             myBitmap = makeStubBitmap();
         }
         imageView = findViewById(R.id.imageView);
-        if (apiOs < Build.VERSION_CODES.M) {
+        if (sdkOs < Build.VERSION_CODES.M) {
             switch (getAdbOrientation()) {
                 case 1:
                     myBitmap = rotateBitmap(myBitmap, 270);

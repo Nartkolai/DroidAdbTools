@@ -37,7 +37,7 @@ import name.schedenig.adbcontrol.Config;
 
 public class MainActivity extends AppCompatActivity {
     static boolean debugUi = false;
-    static int apiOs;
+    static int sdkOs;
     private String[] cmd;
     private JSONUtil jsonUtil;
     private AlterDialogHelper alterDialogHelperBuilder;
@@ -85,9 +85,9 @@ public class MainActivity extends AppCompatActivity {
         btnStartScreenActiv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(getApiOs() > 0) {
+                if(getSdkOs() > 0) {
                     debugUi = false;
-                    apiOs = getApiOs();
+                    sdkOs = getSdkOs();
                     onStartScreenActivity();
                 }
             }
@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
         btnStartScreenActiv.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                apiOs = Build.VERSION_CODES.M;
+                sdkOs = Build.VERSION_CODES.M;
                 debugUi = true;
                 onStartScreenActivity();
                 return false;
@@ -517,18 +517,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Obtaining an OS version for further work with a screenshot. In API versions below 22, screenshots on ADB are taken without reference to screen orientation.
-     * @return OS version API
+     * Obtaining an OS version for further work with a screenshot. In SDK versions below 22, screenshots on ADB are taken without reference to screen orientation.
+     * @return OS version SDK
      */
-    int getApiOs(){
-        int api = 0;
+    int getSdkOs(){
+        int sdkv = 0;
         try {
             cmd = Shell.exec(myAdbCmd + " shell getprop ro.build.version.sdk ").split("\\n+");
         } catch (Shell.ShellException e) {
             e.printStackTrace();
         }
         try {
-            api = Integer.valueOf(cmd[0]);
+            sdkv = Integer.valueOf(cmd[0]);
         }catch (Exception e){
             Log.e(TAG,"" + e);
             AlterDialogSelectorImpl mySelector;
@@ -537,7 +537,7 @@ public class MainActivity extends AppCompatActivity {
             dialogAlterShow = alterDialogHelperBuilder.displayDialog(mySelector);
             dialogAlterShow.show();
         }
-        return api;
+        return sdkv;
     }
 
     @Override
