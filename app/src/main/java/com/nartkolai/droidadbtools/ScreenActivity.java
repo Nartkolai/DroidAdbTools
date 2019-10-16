@@ -1,4 +1,4 @@
-package com.google.nartkolai.droidadbtools;
+package com.nartkolai.droidadbtools;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -14,6 +14,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.RequiresApi;
@@ -36,10 +37,11 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.nartkolai.droidadbtools.Utils.MyPrefHelper;
+import com.nartkolai.droidadbtools.Utils.MyPrefHelper;
 import com.jjnford.android.util.Shell;
 
 import java.io.File;
+import java.nio.file.Files;
 
 import name.schedenig.adbcontrol.AdbHelper;
 import name.schedenig.adbcontrol.AndroidKey;
@@ -49,7 +51,7 @@ public class ScreenActivity extends AppCompatActivity {
     @SuppressLint("StaticFieldLeak")
     private boolean debugUi = MainActivity.debugUi;
     private static String TAG = "ScreenActivity";
-    private File file;
+    private File file, tmpFile;
     private Config config;
     private Thread updateThread;
     private AdbHelper adbHelper;
@@ -86,6 +88,7 @@ public class ScreenActivity extends AppCompatActivity {
         context = this;
         config = MainActivity.config;
         file = new File(config.getLocalImageFilePath());
+        tmpFile = new File(config.getLocalImageFilePath() + ".tmp");
         adbHelper = new AdbHelper(config);
         screenWidth = this.getResources().getDisplayMetrics().widthPixels;
         imageView = findViewById(R.id.imageView);
@@ -137,7 +140,10 @@ public class ScreenActivity extends AppCompatActivity {
 
     private void makeScreenshot() {
         if (!debugUi) {
-            adbHelper.screenshot(file);
+            adbHelper.screenshot(tmpFile);
+            if(tmpFile.renameTo(file)){
+                System.out.println("Rename files");
+            }
         }
         loadImage();
     }
@@ -148,12 +154,9 @@ public class ScreenActivity extends AppCompatActivity {
      */
     private void loadImage() {
         myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
-        if (myBitmap == null) {
-            myBitmap = makeStubBitmap();
-        }
-        imageView = findViewById(R.id.imageView);
         if (sdkOs < Build.VERSION_CODES.M) {
-            switch (getAdbOrientation()) {
+            int orientation = getAdbOrientation();
+            switch (orientation) {
                 case 1:
                     myBitmap = rotateBitmap(myBitmap, 270);
                     break;
@@ -165,6 +168,11 @@ public class ScreenActivity extends AppCompatActivity {
                     break;
             }
         }
+
+        if (myBitmap == null) {
+            myBitmap = makeStubBitmap();
+        }
+        imageView = findViewById(R.id.imageView);
         imageView.setImageBitmap(myBitmap);
         finalHeight = imageView.getMeasuredHeight();
         finalWidth = imageView.getMeasuredWidth();
@@ -558,6 +566,8 @@ public class ScreenActivity extends AppCompatActivity {
 
     public void onExit(View view) {
         removeButtonPanelView();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        stopUpdateThread();
         finish();
     }
 
@@ -569,5 +579,24 @@ public class ScreenActivity extends AppCompatActivity {
             adbHelper.sendKey(key);
         }
         removeButtonPanelView();
+    }
+    private class ScreenAsyncTask extends AsyncTask<Void, Void, Void> {//Todo
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+        }
     }
 }

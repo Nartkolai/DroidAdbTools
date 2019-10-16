@@ -1,6 +1,6 @@
 package com.jjnford.android.util;
 
-import com.google.nartkolai.droidadbtools.MainActivity;
+import com.nartkolai.droidadbtools.MainActivity;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;

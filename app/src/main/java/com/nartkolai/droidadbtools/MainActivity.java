@@ -1,9 +1,13 @@
-package com.google.nartkolai.droidadbtools;
+package com.nartkolai.droidadbtools;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -13,25 +17,29 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.nartkolai.droidadbtools.Utils.AlterDialogHelper;
-import com.google.nartkolai.droidadbtools.Utils.JSONUtil;
-import com.google.nartkolai.droidadbtools.Utils.MyPrefHelper;
-import com.google.nartkolai.droidadbtools.Utils.AlterDialogSelectorImpl;
+import com.nartkolai.droidadbtools.Utils.AlterDialogHelper;
+import com.nartkolai.droidadbtools.Utils.JSONUtil;
+import com.nartkolai.droidadbtools.Utils.MyPrefHelper;
+import com.nartkolai.droidadbtools.Utils.AlterDialogSelectorImpl;
 import com.jjnford.android.util.Shell;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.Socket;
 
 import name.schedenig.adbcontrol.Config;
 
@@ -47,9 +55,9 @@ public class MainActivity extends AppCompatActivity {
     private boolean initP;
     public static final String TAG = "Droid adb tools";
     @SuppressLint("SdCardPath")
-    final static String myPath = "/data/data/com.google.nartkolai.droidadbtools/files";
+    final static String myPath = "/data/data/com.nartkolai.droidadbtools/files";
     private String myAdbCmd;
-    private String useIpAdrDev = "Devices not selected";
+    public static  String useIpAdrDev = "Devices not selected";
     private String outText;
     private int verPref;
     public static String[] myExportPath;
@@ -67,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
             initP = savedInstanceState.getBoolean("initP");
             outText = savedInstanceState.getString("outText");
             useIpAdrDev = savedInstanceState.getString("useIpAdrDev");
+            config.setAdbCommand(savedInstanceState.getString("adbCommand"));
         }
         setContentView(R.layout.activity_main);
         alterDialogHelperBuilder = new AlterDialogHelper(this);
@@ -78,7 +87,6 @@ public class MainActivity extends AppCompatActivity {
         tvIp.setText(useIpAdrDev);
         String fileName = "ipAdrDev";
         jsonUtil = new JSONUtil(this, fileName);
-        System.out.println("onCreate chkStartAdb " + adbStatStop);
         initParam();
         chkConfig();
         chkStartAdb();
@@ -106,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy(){
         super.onDestroy();
-        if (dialogAlterShow !=null && dialogAlterShow.isShowing()){
+        if (dialogAlterShow != null && dialogAlterShow.isShowing()){
             dialogAlterShow.dismiss();
         }
     }
@@ -119,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
         savedInstanceState.putString("outText", outText);
         savedInstanceState.putBoolean("adbStatStop", chkStartAdb());
         savedInstanceState.putBoolean("initP", initParam());
+        savedInstanceState.putString("adbCommand", config.getAdbCommand());
     }
 
     /**
@@ -126,7 +135,6 @@ public class MainActivity extends AppCompatActivity {
      */
     boolean initParam() {
         if (!initP) {
-            System.out.println("initParam() ");
             verPref = 2;
             jsonUtil.chkFile();// Check JSON files
             checkIfAlreadyhavePermission();
@@ -200,21 +208,38 @@ public class MainActivity extends AppCompatActivity {
      * @param longClick long press on the selected item to delete it
      */
     @SuppressLint("SetTextI18n")
-    public void selectDevice(String position, Boolean longClick) {
-        if (longClick) {
+    public void selectDevice(String position, Boolean longClick, Boolean addDev) {//Todo
+        if (longClick && !addDev) {
             jsonUtil.jsonHelper(position, true);
-        } else {
-            useIpAdrDev = position;
-            tvIp.setText("Ip " + useIpAdrDev + " selected");
+        } else if(position != null && !addDev) {
+            useIpAdrDev = " -s " + position + ":5555";
+            tvIp.setText("Ip " + useIpAdrDev.substring(3) + " selected");
+            myAdbCmd += useIpAdrDev;
+            config.setAdbCommand(myAdbCmd);
             if (adbStatStop) {
                 startAdbServer();
             }
             try {
-                cmd = Shell.exec(myAdbCmd + " connect " + useIpAdrDev).split("\\n+");
+                cmd = Shell.exec(myAdbCmd + " connect " + useIpAdrDev.substring(4)).split("\\n+");
                 txtSetter(cmd);
             } catch (Shell.ShellException e) {
                 e.printStackTrace();
             }
+        }
+        if(addDev){//todo
+            AlterDialogSelectorImpl mySelector;
+            Class[] parameterTypes = new Class[1];
+            parameterTypes[0] = String.class;
+            Method myMethod = null;
+            try {
+                myMethod = MainActivity.class.getMethod("addIpDevices", parameterTypes);
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
+            }
+            mySelector = new AlterDialogSelectorImpl(this, myMethod);
+            mySelector.toAlterDialogInputValues("Add IP devices", "192.168.", (InputType.TYPE_NUMBER_FLAG_SIGNED | InputType.TYPE_NUMBER_VARIATION_NORMAL));
+            dialogAlterShow = alterDialogHelperBuilder.displayDialog(mySelector);
+            dialogAlterShow.show();
         }
     }
 
@@ -233,6 +258,7 @@ public class MainActivity extends AppCompatActivity {
         outText = ip;
         textView.setText(ip);
         jsonUtil.jsonHelper(ip);
+        actionSelectDevices();
     }
 
     /**
@@ -311,6 +337,21 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    void actionSelectDevices(){
+        final String[] list = jsonUtil.jsonHelperGetItemArr();
+        AlterDialogSelectorImpl mySelector;
+        Method myMethod = null;
+        try {
+            myMethod = MainActivity.class.getMethod("selectDevice", String.class, Boolean.class, Boolean.class);
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+        mySelector = new AlterDialogSelectorImpl(this, myMethod);
+        mySelector.toAlterDialogListItem("Select IP devices", "Delete select devices", list);
+        dialogAlterShow = alterDialogHelperBuilder.displayDialog(mySelector);
+        dialogAlterShow.show();
+    }
+
 
     /*
      * Create menu
@@ -324,7 +365,6 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint({"Assert", "SetTextI18n"})
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        final String[] list = jsonUtil.jsonHelperGetItemArr();
         int id = item.getItemId();
         AlterDialogSelectorImpl mySelector;
         Class[] parameterTypes = new Class[1];
@@ -343,44 +383,13 @@ public class MainActivity extends AppCompatActivity {
                 dialogAlterShow = alterDialogHelperBuilder.displayDialog(mySelector);
                 dialogAlterShow.show();
                 return true;
-            // Add devices
-            case R.id.action_add_dev:
-                try {
-                    myMethod = MainActivity.class.getMethod("addIpDevices", parameterTypes);
-                } catch (NoSuchMethodException e) {
-                    e.printStackTrace();
-                }
-                mySelector = new AlterDialogSelectorImpl(this, myMethod);
-                mySelector.toAlterDialogInputValues("Add IP devices", "192.168.", (InputType.TYPE_NUMBER_FLAG_SIGNED | InputType.TYPE_NUMBER_VARIATION_NORMAL));
-                dialogAlterShow = alterDialogHelperBuilder.displayDialog(mySelector);
-                dialogAlterShow.show();
-                return true;
             // Select devices
             case R.id.action_select_dev:
-                parameterTypes = new Class[2];
-                parameterTypes[0] = String.class;
-                parameterTypes[1] = Boolean.class;
-                try {
-                    myMethod = MainActivity.class.getMethod("selectDevice", String.class, Boolean.class);
-                } catch (NoSuchMethodException e) {
-                    e.printStackTrace();
-                }
-                mySelector = new AlterDialogSelectorImpl(this, myMethod);
-                mySelector.toAlterDialogListItem("Select IP devices", "Delete select devices", list);
-                dialogAlterShow = alterDialogHelperBuilder.displayDialog(mySelector);
-                dialogAlterShow.show();
+                actionSelectDevices();
                 return true;
             //Send adb shell command
             case R.id.action_adb_shell:
-                try {
-                    myMethod = MainActivity.class.getMethod("actAdbCmd", parameterTypes);
-                } catch (NoSuchMethodException e) {
-                    e.printStackTrace();
-                }
-                mySelector = new AlterDialogSelectorImpl(this, myMethod);
-                mySelector.toAlterDialogInputValues("adb command", "shell input keyevent " + KeyEvent.KEYCODE_HOME, InputType.TYPE_CLASS_TEXT);
-                dialogAlterShow = alterDialogHelperBuilder.displayDialog(mySelector);
-                dialogAlterShow.show();
+                actionAdbCommand();
                 return true;
 
             // Get list connected devices
@@ -412,6 +421,23 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("SdCardPath")
+    void actionAdbCommand(){
+        Method myMethod = null;
+        AlterDialogSelectorImpl mySelector;
+        try {
+            myMethod = MainActivity.class.getMethod("actAdbCmd", String.class);
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+        String s;
+        mySelector = new AlterDialogSelectorImpl(this, myMethod);
+//         s = "shell/sdcard/adb_screenshot.png";
+         s = "shell input keyevent ";
+        mySelector.toAlterDialogInputValues("adb command", s + KeyEvent.KEYCODE_HOME, InputType.TYPE_CLASS_TEXT);
+        dialogAlterShow = alterDialogHelperBuilder.displayDialog(mySelector);
+        dialogAlterShow.show();
+    }
 
     /**
      * @param cmd result of a command sent for execution
@@ -494,8 +520,8 @@ public class MainActivity extends AppCompatActivity {
             MyPrefHelper.putPref("version", version, this);
             MyPrefHelper.putPref("adbCommand", myAdbCmd, this);
             MyPrefHelper.putPref("screenshotDelay", 3000, this);
-            MyPrefHelper.putPref("localImageFilePath", "/sdcard/adbcontrol_screenshot.png", this);
-            MyPrefHelper.putPref("phoneImageFilePath", "/sdcard/adbcontrol_screenshot.png", this);
+            MyPrefHelper.putPref("localImageFilePath", getCacheDir() + "/screenshot.png", this);
+            MyPrefHelper.putPref("phoneImageFilePath", "/sdcard/adb_screenshot.png", this);
         }
         config = new Config();
         config.setAdbCommand(MyPrefHelper.getPref("adbCommand", "adb", this));

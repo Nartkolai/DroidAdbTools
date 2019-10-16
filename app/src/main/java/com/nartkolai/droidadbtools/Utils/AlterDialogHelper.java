@@ -1,4 +1,4 @@
-package com.google.nartkolai.droidadbtools.Utils;
+package com.nartkolai.droidadbtools.Utils;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -8,6 +8,8 @@ import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+
+import com.nartkolai.droidadbtools.R;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -24,14 +26,14 @@ public class AlterDialogHelper extends AlertDialog{
     public AlertDialog displayDialog(final AlterDialogSelectorImpl mySel) {
         final String[] list = mySel.getItemList();
         final EditText input = new EditText(context);
-        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        final Builder builder = new Builder(context);
         builder.setTitle(mySel.getTilts());
         if (mySel.getNeedInput()) { // Creating a dialog box with a field for entering values
             input.setInputType(mySel.getInputType());
             input.setText(mySel.getText());
             input.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
             builder.setView(input);
-            builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener()  {
+            builder.setPositiveButton(android.R.string.ok, new OnClickListener()  {
                 @Override
                 public void onClick(DialogInterface dialog, int which)  {
                     String act = String.valueOf(input.getText());
@@ -46,19 +48,37 @@ public class AlterDialogHelper extends AlertDialog{
                     }
                 }
             });
-            builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            builder.setNegativeButton(android.R.string.cancel, new OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     dialog.cancel();
                 }
             });
         }else if(list != null && !mySel.getNeedInput()){ //Creating a dialog to select a value from a list
-            builder.setPositiveButton(context.getResources().getString(android.R.string.cancel), null);
-            builder.setItems(list, new DialogInterface.OnClickListener() {
+            builder.setPositiveButton(context.getResources().getString(R.string.add_ip_dev), new OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Object[] parameters = new Object[3];
+                    parameters[0] = null;
+                    parameters[1] = false;
+                    parameters[2] = true;
+                    try {
+                        mySel.getMethod().invoke(mySel.getObject(), parameters);
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    } catch (InvocationTargetException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            });
+            builder.setNegativeButton(context.getResources().getString(android.R.string.cancel), null);
+            builder.setItems(list, new OnClickListener() {
                 public void onClick(DialogInterface dialog, int position) {
-                    Object[] parameters = new Object[2];
+                    Object[] parameters = new Object[3];
                     parameters[0] = list[position];
                     parameters[1] = false;
+                    parameters[2] = false;
                     try {
                         mySel.getMethod().invoke(mySel.getObject(), parameters);
                     } catch (IllegalAccessException e) {
@@ -71,7 +91,7 @@ public class AlterDialogHelper extends AlertDialog{
         }else { //Create confirmation dialog
             builder.setTitle(mySel.getTilts());
             builder.setMessage(mySel.getText());
-            builder.setPositiveButton(context.getResources().getString(android.R.string.ok), new DialogInterface.OnClickListener() {
+            builder.setPositiveButton(context.getResources().getString(android.R.string.ok), new OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     if (mySel.getMethod() != null) {
@@ -89,7 +109,7 @@ public class AlterDialogHelper extends AlertDialog{
                 }
             });
             if (mySel.getMethod() != null) {
-                builder.setNegativeButton(context.getResources().getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
+                builder.setNegativeButton(context.getResources().getString(android.R.string.cancel), new OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         Object[] parameters = new Object[1];
@@ -109,7 +129,7 @@ public class AlterDialogHelper extends AlertDialog{
         builder.create();
         alertDialog = builder.create();
         if (!mySel.getNeedInput() && mySel.getItemList() != null){// Creating a confirmation dialog box after a long click on an item
-            alertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            alertDialog.setOnShowListener(new OnShowListener() {
                 @Override
                 public void onShow(DialogInterface dialog) {
                     ListView lv = alertDialog.getListView();
@@ -117,15 +137,16 @@ public class AlterDialogHelper extends AlertDialog{
                         @Override
                         public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
                             assert list != null;
-                            builder.setTitle(mySel.getSubTilts() + "\n" + list[position]);
+                            builder.setTitle(mySel.getSubTilts() + list[position]);
                             builder.setItems(null, null);
                             builder.setPositiveButton(context.getResources().getString(android.R.string.ok),
-                                    new DialogInterface.OnClickListener() {
+                                    new OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
-                                            Object[] parameters = new Object[2];
+                                            Object[] parameters = new Object[3];
                                             parameters[0] = list[position];
                                             parameters[1] = true;
+                                            parameters[2] = false;
                                             try {
                                                 mySel.getMethod().invoke(mySel.getObject(), parameters);
                                             } catch (IllegalAccessException e) {
@@ -138,7 +159,7 @@ public class AlterDialogHelper extends AlertDialog{
                                         }
                                     }
                             );
-                            builder.setNegativeButton(context.getResources().getString(android.R.string.cancel), new DialogInterface.OnClickListener() {
+                            builder.setNegativeButton(context.getResources().getString(android.R.string.cancel), new OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             dialog.cancel();

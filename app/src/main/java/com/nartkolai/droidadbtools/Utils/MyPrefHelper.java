@@ -1,4 +1,4 @@
-package com.google.nartkolai.droidadbtools.Utils;
+package com.nartkolai.droidadbtools.Utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;

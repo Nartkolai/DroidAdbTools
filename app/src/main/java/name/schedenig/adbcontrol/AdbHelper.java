@@ -11,7 +11,7 @@
  *******************************************************************************/
 package name.schedenig.adbcontrol;
 
-import com.google.nartkolai.droidadbtools.MainActivity;
+import com.nartkolai.droidadbtools.MainActivity;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -95,9 +95,15 @@ public class AdbHelper
 	public void screenshot(File target)
 	{
 		String fileName = config.getPhoneImageFilePath();
+		System.out.println("fileName " + fileName);
+		System.out.println("target.getAbsolutePath() " + target.getAbsolutePath());
 		
 		executeShellCommand(MessageFormat.format("screencap -p {0}", fileName), new ByteArrayOutputStream());
 		executeCommand(MessageFormat.format("pull {0} {1}", fileName, target.getAbsolutePath()), new ByteArrayOutputStream());
+
+		if(fileName == null){
+			executeCommand(MessageFormat.format("exec-out screencap -p > {0}", target.getAbsolutePath()), new ByteArrayOutputStream());
+		}
 	}
 
 	public void sendSwipe(int downX, int downY, int upX, int upY)
