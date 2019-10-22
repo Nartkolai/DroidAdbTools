@@ -20,4 +20,5 @@
     <string name="resize_swipe_zone">Resize swipe zone</string>
     <string name="set_swipe_zone">Set swipe zone</string>
     <string name="add_ip_dev">Add dev IP</string>
+    <string name="keygen">Generate adb public/private key</string>
 </resources>

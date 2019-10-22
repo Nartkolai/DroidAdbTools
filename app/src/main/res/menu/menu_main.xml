@@ -17,11 +17,6 @@
         android:orderInCategory="105"
         android:title="@string/list_connected_devices"
         android:visible="true" />
-<!--    <item-->
-<!--        android:id="@+id/action_add_dev"-->
-<!--        android:orderInCategory="110"-->
-<!--        android:title="@string/add_ip_devices"-->
-<!--        app:showAsAction="never" />-->
     <item
         android:id="@+id/action_select_dev"
         android:orderInCategory="110"
@@ -51,6 +46,11 @@
         android:id="@+id/action_adb_shell"
         android:orderInCategory="110"
         android:title="@string/adb_shell"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_keygen"
+        android:orderInCategory="110"
+        android:title="@string/keygen"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_exit"

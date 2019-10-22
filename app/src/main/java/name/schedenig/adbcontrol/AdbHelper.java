@@ -95,8 +95,6 @@ public class AdbHelper
 	public void screenshot(File target)
 	{
 		String fileName = config.getPhoneImageFilePath();
-		System.out.println("fileName " + fileName);
-		System.out.println("target.getAbsolutePath() " + target.getAbsolutePath());
 		
 		executeShellCommand(MessageFormat.format("screencap -p {0}", fileName), new ByteArrayOutputStream());
 		executeCommand(MessageFormat.format("pull {0} {1}", fileName, target.getAbsolutePath()), new ByteArrayOutputStream());

@@ -4,28 +4,54 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+    android:id="@+id/relative_layout_screen_view"
     tools:context=".ScreenActivity">
 
-    <ImageView
-        android:id="@+id/imageView"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:adjustViewBounds="true"
-        android:background="#2B2B2D"
-        android:contentDescription="@string/screenshot"
-        android:scaleType="fitStart" />
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:background="#2B2B2D"
+            android:contentDescription="@string/screenshot"
+            android:scaleType="fitStart" />
 
-    <View
-        android:layout_width="wrap_content"
-        android:layout_below="@+id/imageView"
-        android:layout_height="1dp"
-        android:background="@android:color/holo_green_dark"/>
+        <View
+            android:id="@+id/separator_horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="1dp"
+            android:layout_below="@+id/imageView"
+            android:background="@android:color/holo_green_dark" />
 
-    <View
-        android:layout_width="1dp"
-        android:layout_alignEnd="@+id/imageView"
-        android:layout_height="wrap_content"
-        android:background="@android:color/holo_green_dark"
-        android:layout_alignRight="@+id/imageView" />
+        <View
+            android:id="@+id/separator_vertical"
+            android:layout_width="1dp"
+            android:layout_height="wrap_content"
+            android:layout_alignEnd="@+id/imageView"
+            android:layout_alignRight="@+id/imageView"
+            android:background="@android:color/holo_green_dark" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            style="@android:style/Widget.DeviceDefault.Light.ProgressBar.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentBottom="true"
+            android:indeterminate="false"
+            android:max="100" />
+
+        <TextView
+            android:id="@+id/progressBar_text"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignStart="@id/progressBar"
+            android:layout_alignLeft="@id/progressBar"
+            android:layout_alignTop="@id/progressBar"
+            android:layout_alignEnd="@id/progressBar"
+            android:layout_alignRight="@id/progressBar"
+            android:layout_alignBottom="@id/progressBar"
+            android:background="#00000000" />
 
 </RelativeLayout>

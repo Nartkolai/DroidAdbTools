@@ -1,6 +1,8 @@
 package com.nartkolai.droidadbtools.Utils;
 
 
+import android.text.method.KeyListener;
+
 import java.lang.reflect.Method;
 
 public class AlterDialogSelectorImpl implements AlterDialogSelector {
@@ -12,6 +14,7 @@ public class AlterDialogSelectorImpl implements AlterDialogSelector {
     private boolean input = false;
     private Object object;
     private Method method;
+    private KeyListener keyListener;
 
 
     public AlterDialogSelectorImpl(Object object, Method method){
@@ -64,6 +67,14 @@ public class AlterDialogSelectorImpl implements AlterDialogSelector {
     @Override
     public int getInputType() {
         return inputType;
+    }
+
+    public void setKeyListener(KeyListener keyListener){
+        this.keyListener = keyListener;
+    }
+
+    public KeyListener getKeyListener(){
+        return keyListener;
     }
 
     @Override

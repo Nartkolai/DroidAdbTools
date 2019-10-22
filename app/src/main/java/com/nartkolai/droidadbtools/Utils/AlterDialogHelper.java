@@ -27,10 +27,15 @@ public class AlterDialogHelper extends AlertDialog{
         final String[] list = mySel.getItemList();
         final EditText input = new EditText(context);
         final Builder builder = new Builder(context);
+        int position = mySel.getText().length();
         builder.setTitle(mySel.getTilts());
         if (mySel.getNeedInput()) { // Creating a dialog box with a field for entering values
             input.setInputType(mySel.getInputType());
+            if(mySel.getKeyListener() != null) {
+                input.setKeyListener(mySel.getKeyListener());
+            }
             input.setText(mySel.getText());
+            input.setSelection(position);
             input.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
             builder.setView(input);
             builder.setPositiveButton(android.R.string.ok, new OnClickListener()  {

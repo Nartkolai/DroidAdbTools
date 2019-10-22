@@ -48,8 +48,9 @@
                 android:layout_marginLeft="15dp"
                 android:layout_marginEnd="20dp"
                 android:layout_marginRight="20dp"
-                android:drawableStart="@android:drawable/ic_input_add"
-                android:drawableLeft="@android:drawable/ic_input_add" />
+                style="?android:attr/borderlessButtonStyle"
+                android:drawableStart="@android:drawable/btn_plus"
+                android:drawableLeft="@android:drawable/btn_plus" />
 
             <Button
                 android:id="@+id/btn_sz_size_minus"
@@ -59,8 +60,9 @@
                 android:layout_marginLeft="20dp"
                 android:layout_marginEnd="15dp"
                 android:layout_marginRight="15dp"
-                android:drawableEnd="@android:drawable/presence_busy"
-                android:drawableRight="@android:drawable/presence_busy" />
+                style="?android:attr/borderlessButtonStyle"
+                android:drawableEnd="@android:drawable/btn_minus"
+                android:drawableRight="@android:drawable/btn_minus" />
         </LinearLayout>
 
         <Button

@@ -3,20 +3,16 @@ package com.nartkolai.droidadbtools;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
-import android.graphics.Rect;
-import android.graphics.RectF;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
@@ -33,15 +29,26 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.nartkolai.droidadbtools.Utils.MyPrefHelper;
 import com.jjnford.android.util.Shell;
+import com.nartkolai.droidadbtools.Utils.MakeStubBitmap;
+import com.nartkolai.droidadbtools.Utils.MyPrefHelper;
 
 import java.io.File;
-import java.nio.file.Files;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.ref.WeakReference;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 import name.schedenig.adbcontrol.AdbHelper;
 import name.schedenig.adbcontrol.AndroidKey;
@@ -51,11 +58,14 @@ public class ScreenActivity extends AppCompatActivity {
     @SuppressLint("StaticFieldLeak")
     private boolean debugUi = MainActivity.debugUi;
     private static String TAG = "ScreenActivity";
-    private File file, tmpFile;
+    private File file;
+    private File tmpFile;
     private Config config;
-    private Thread updateThread;
+    private Handler updateHandler;
+    private Runnable runnable;
     private AdbHelper adbHelper;
     private static int screenWidth;
+    //    private static int screenHeight;
     private float finalHeight;
     private float finalWidth;
     private int screenDownX = 0;
@@ -63,8 +73,12 @@ public class ScreenActivity extends AppCompatActivity {
     private int xMove;
     private int xDown;
     private int yDown;
+    private float deltaX;
+    private float deltaY;
     private ImageView imageView;
     private Bitmap myBitmap;
+    private float myBitmapWidth;
+    private float myBitmapHeight;
     private int swipeZoneSize = 50; //dpi
     private View panelViewButton = null;
     private View panelViewSetSZ = null;
@@ -73,12 +87,19 @@ public class ScreenActivity extends AppCompatActivity {
     private boolean showSwipeZone = true;
     private CheckBox checkBoxShowSZ;
     private Context context;
-    private int sdkOs = MainActivity.sdkOs;
+    private int sdkOs/* = MainActivity.sdkOs*/;
+    private ScreenAsyncTask screenAsyncTask;
+    private boolean updateOrientation = true;
+    private ProgressBar progressBar;
+    private TextView progressBarText;
+    @SuppressLint("SimpleDateFormat")
+    final DateFormat DATE_FORMAT = new SimpleDateFormat("mm:ss.SSS");
 
     @SuppressLint("ClickableViewAccessibility")
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        System.out.println("onCreate()");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -91,58 +112,57 @@ public class ScreenActivity extends AppCompatActivity {
         tmpFile = new File(config.getLocalImageFilePath() + ".tmp");
         adbHelper = new AdbHelper(config);
         screenWidth = this.getResources().getDisplayMetrics().widthPixels;
+//        screenHeight = this.getResources().getDisplayMetrics().heightPixels;
         imageView = findViewById(R.id.imageView);
         swipeZoneSize = MyPrefHelper.getPref("swipeZoneSize", 50, this);
         showSwipeZone = MyPrefHelper.getPref("showSwipeZone", true, this);
+        progressBar = findViewById(R.id.progressBar);
+        progressBar.setVisibility(View.INVISIBLE);
+        progressBarText = findViewById(R.id.progressBar_text);
+//        progressBarText.setVisibility(View.INVISIBLE);
+        Intent intent = getIntent();
+        sdkOs = intent.getIntExtra("sdkOs", 0);
         hiddenNaniBar();
-        startUpdateThread();
+        startUpdateRunnable();
         forDebuggingUi();
         showSwipeZone(swipeZoneSize);
+        myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
     }
 
     /**
      * Stop the thread of image acquisition
      */
-    private void stopUpdateThread() {
-        if (updateThread != null) {
-            updateThread.interrupt();
-            updateThread = null;
+    private void stopUpdateRunnable() {
+        if (updateHandler != null) {
+            updateHandler.removeCallbacks(runnable);
+            updateHandler = null;
         }
     }
 
     /**
      * Start the thread of image acquisition
      */
-    private void startUpdateThread() {
-        if (updateThread == null) {
-            updateThread = new Thread() {
-                @Override
-                public void run() {
-                    while (!Thread.interrupted()) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                makeScreenshot();
-                            }
-                        });
-
-                        try {
-                            Thread.sleep(config.getScreenshotDelay());
-                        } catch (InterruptedException ex) {
-                            break;
-                        }
-                    }
-                }
-            };
-            updateThread.start();
+    private void startUpdateRunnable() {
+        runnable = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("_____________________________ " + DATE_FORMAT.format(Calendar.getInstance().getTime()) + " _________________________________________");
+                System.out.println("UpdateRunnable");
+                makeScreenshot();
+                updateHandler.postDelayed(this, config.getScreenshotDelay());
+            }
+        };
+        if (updateHandler == null) {
+            updateHandler = new Handler();
+            updateHandler.postDelayed(runnable, config.getScreenshotDelay());
         }
     }
 
     private void makeScreenshot() {
         if (!debugUi) {
-            adbHelper.screenshot(tmpFile);
-            if(tmpFile.renameTo(file)){
-                System.out.println("Rename files");
+            if (updateOrientation) {
+                screenAsyncTask = new ScreenAsyncTask(this);
+                screenAsyncTask.execute(tmpFile);
             }
         }
         loadImage();
@@ -153,56 +173,37 @@ public class ScreenActivity extends AppCompatActivity {
      * Load image and get its size
      */
     private void loadImage() {
-        myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
-        if (sdkOs < Build.VERSION_CODES.M) {
-            int orientation = getAdbOrientation();
-            switch (orientation) {
-                case 1:
-                    myBitmap = rotateBitmap(myBitmap, 270);
-                    break;
-                case 2:
-                    myBitmap = rotateBitmap(myBitmap, 180);
-                    break;
-                case 3:
-                    myBitmap = rotateBitmap(myBitmap, 90);
-                    break;
-            }
-        }
-
+        System.out.println("pre loadImage " + DATE_FORMAT.format(Calendar.getInstance().getTime()));
         if (myBitmap == null) {
-            myBitmap = makeStubBitmap();
+            String str = "Loading Image";
+            if (debugUi) str = "Stub image";
+            myBitmap = new MakeStubBitmap(str, this).getBitmap();
         }
-        imageView = findViewById(R.id.imageView);
+        if (updateOrientation || debugUi) {
+            if (sdkOs < Build.VERSION_CODES.M) {
+                switch (getAdbOrientation()) {
+                    case 1:
+                        myBitmap = rotateBitmap(myBitmap, 270);
+                        break;
+                    case 2:
+                        myBitmap = rotateBitmap(myBitmap, 180);
+                        break;
+                    case 3:
+                        myBitmap = rotateBitmap(myBitmap, 90);
+                        break;
+                }
+            }
+            myBitmapWidth = myBitmap.getWidth();
+            myBitmapHeight = myBitmap.getHeight();
+            deltaX = myBitmapWidth / finalWidth;
+            deltaY = myBitmapHeight / finalHeight;
+            setOrientation(myBitmap.getWidth(), myBitmap.getHeight());
+            updateOrientation = false;
+        }
         imageView.setImageBitmap(myBitmap);
         finalHeight = imageView.getMeasuredHeight();
         finalWidth = imageView.getMeasuredWidth();
-        setOrientation(myBitmap.getWidth(), myBitmap.getHeight());
-    }
-
-    Bitmap makeStubBitmap() {
-        int width = this.getResources().getDisplayMetrics().widthPixels;
-        int height = this.getResources().getDisplayMetrics().heightPixels;
-        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        int color = Color.parseColor("#463F3F");
-        Paint paint = new Paint();
-        Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
-        RectF rectF = new RectF(rect);
-        float roundPx = 12;
-        Canvas canvas = new Canvas(bitmap);
-        paint.setAntiAlias(true);
-        canvas.drawARGB(0, 0, 0, 0);
-        paint.setColor(color);
-        canvas.drawRoundRect(rectF, roundPx, roundPx, paint);
-        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
-        canvas.drawBitmap(bitmap, rect, rect, paint);
-        paint.setTextSize(50);
-        paint.setColor(Color.GREEN);
-        String str = "Stub image";
-        paint.getTextBounds(str, 0, str.length(), rect);
-        int textWidth = rect.width();
-        int textHeight = rect.height();
-        canvas.drawText(str, (width >> 1) - textWidth/2, (height >> 1) - textHeight/2, paint);
-        return bitmap;
+        System.out.println("pos loadImage " + DATE_FORMAT.format(Calendar.getInstance().getTime()));
     }
 
     /**
@@ -223,10 +224,44 @@ public class ScreenActivity extends AppCompatActivity {
      * @param height Input image height
      */
     private void setOrientation(int width, int height) {
-        if (width > height) {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        View relativeLayoutScreenView = findViewById(R.id.relative_layout_screen_view);
+//        View screenSeparatorViewHorizontal = findViewById(R.id.separator_horizontal);
+//        View screenSeparatorViewVertical = findViewById(R.id.separator_vertical);
+//        System.out.println("getWidth() " + relativeLayoutScreenView.getWidth());
+//        System.out.println("  width    " + width);
+//        System.out.println("getHeight() " + relativeLayoutScreenView.getHeight());
+//        System.out.println("  height    " + height);
+        double ratioScreenView = relativeLayoutScreenView.getWidth() / relativeLayoutScreenView.getHeight();
+        double ratioScreenImg = (double) width / (double) height;
+        double ratioWidth;
+        double ratioHeight;
+
+        if (ratioScreenView > ratioScreenImg) {
+            ratioWidth = relativeLayoutScreenView.getWidth() / (double) width;
+            ratioHeight = relativeLayoutScreenView.getHeight() / (double) height;
+//            System.out.println("in >");
         } else {
+            ratioWidth = (double) width / relativeLayoutScreenView.getWidth();
+            ratioHeight = (double) height / relativeLayoutScreenView.getHeight();
+//            System.out.println("in <");
+        }
+        double deltaWidth = ratioWidth / ratioHeight;
+        double deltaHeight = ratioHeight / ratioWidth;
+//        System.out.println("coefWidth " + coefWidth);
+        imageView.setLayoutParams(new RelativeLayout.LayoutParams(
+                (int) (relativeLayoutScreenView.getWidth() * deltaWidth),
+                (int) (relativeLayoutScreenView.getHeight() * deltaHeight)
+        ));
+        if (width < height) {
+//            screenSeparatorViewHorizontal.setVisibility(View.GONE);
+//            screenSeparatorViewHorizontal.setVisibility(View.INVISIBLE);
+            System.out.println("SCREEN_ORIENTATION_PORTRAIT");
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        } else {
+//            screenSeparatorViewHorizontal.setVisibility(View.GONE);
+//            screenSeparatorViewHorizontal.setVisibility(View.INVISIBLE);
+            System.out.println("SCREEN_ORIENTATION_LANDSCAPE");
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         }
     }
 
@@ -236,23 +271,19 @@ public class ScreenActivity extends AppCompatActivity {
     private int getAdbOrientation() {
         String[] cmd = null;
         try {
+            Shell.setOutputStream(Shell.OUTPUT.STDOUT);
             cmd = Shell.exec(config.getAdbCommand() + " shell dumpsys input | grep SurfaceOrientation").split("\\n+");
         } catch (Shell.ShellException e) {
             e.printStackTrace();
         }
         assert cmd != null;
         String i = cmd[0].substring(cmd[0].length() - 1);
-        Log.i(TAG, "getAdbOrientation " + i);
+        System.out.println("getAdbOrientation " + DATE_FORMAT.format(Calendar.getInstance().getTime()));
         return Integer.valueOf(i);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-
-        float myBitmapWidth = myBitmap.getWidth();
-        float myBitmapHeight = myBitmap.getHeight();
-        float deltaX = myBitmapWidth / finalWidth;
-        float deltaY = myBitmapHeight / finalHeight;
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_MOVE:
@@ -289,13 +320,11 @@ public class ScreenActivity extends AppCompatActivity {
      * @param screenUpY   coordinate reduced to the screen size of the managed device
      */
     void touchHandler(int screenDownX, int screenDownY, int screenUpX, int screenUpY) {
-        float screenWidth = myBitmap.getWidth();
-        float screenHeight = myBitmap.getHeight();
         int dx = Math.abs(screenDownX - screenUpX);
         int dy = Math.abs(screenDownY - screenUpY);
-        if (screenWidth >= screenUpX && screenHeight >= screenUpY) {
-            Log.i(TAG, "move UpX " + screenUpX + ", UpY " + screenUpY);
-            Log.i(TAG, "move DnX " + screenDownX + ", DnY " + screenDownY);
+        if (myBitmapWidth >= screenUpX && myBitmapHeight >= screenUpY) {
+            Log.i(TAG, "DnX " + screenDownX + ", DnY " + screenDownY);
+            Log.i(TAG, "UpX " + screenUpX + ", UpY " + screenUpY);
             if (dx < 5 && dy < 5) {
                 if (debugUi) {
                     Toast.makeText(ScreenActivity.this, " UpX " + screenUpX + ",  UpY " + screenUpY, Toast.LENGTH_SHORT).show();
@@ -347,14 +376,16 @@ public class ScreenActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        stopUpdateThread();
+        removeButtonPanelView();
+        stopScreenAsyncTask();
+        stopUpdateRunnable();
     }
 
     /**
      * This method converts dp unit to equivalent pixels, depending on device density.
      * {@link java.net.URL https://stackoverflow.com/questions/4605527/converting-pixels-to-dp}
      *
-     * @param dp      A value in dp (density independent pixels) unit. Which we need to convert into pixels
+     * @param dp A value in dp (density independent pixels) unit. Which we need to convert into pixels
      * @return A float value to represent px equivalent to dp depending on device density
      */
     public float convertDpToPixel(float dp) {
@@ -425,7 +456,6 @@ public class ScreenActivity extends AppCompatActivity {
             viewSeparatorZone.setClickable(false);
             viewSeparatorZone.setLayoutParams(llpViewSeparatorZone);
             linearLayoutSZ.addView(viewSeparatorZone);
-
             linearLayoutSwZonMain.addView(linearLayoutSp);
             linearLayoutSwZonMain.addView(linearLayoutSZ);
             addContentView(linearLayoutSwZonMain, rlp);
@@ -507,7 +537,6 @@ public class ScreenActivity extends AppCompatActivity {
                 }
             });
         }
-
     }
 
     /**
@@ -531,7 +560,6 @@ public class ScreenActivity extends AppCompatActivity {
             rootView.removeView(panelViewSetSZ);
             panelViewSetSZ = null;
         }
-
     }
 
     /**
@@ -565,9 +593,8 @@ public class ScreenActivity extends AppCompatActivity {
     }
 
     public void onExit(View view) {
-        removeButtonPanelView();
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        stopUpdateThread();
+        stopScreenAsyncTask();
+        stopUpdateRunnable();
         finish();
     }
 
@@ -580,23 +607,138 @@ public class ScreenActivity extends AppCompatActivity {
         }
         removeButtonPanelView();
     }
-    private class ScreenAsyncTask extends AsyncTask<Void, Void, Void> {//Todo
+
+    void stopScreenAsyncTask() {
+        if (screenAsyncTask != null) {
+            screenAsyncTask.cancel(true);
+            screenAsyncTask = null;
+        }
+    }
+
+    @SuppressLint("StaticFieldLeak")
+    private class ScreenAsyncTask extends AsyncTask<File, Integer, File> {//Todo
+        Context context;
+
+        private WeakReference<ScreenActivity> activityReference;
+
+        // only retain a weak reference to the activity
+        ScreenAsyncTask(ScreenActivity context) {
+            this.context = context;
+            activityReference = new WeakReference<>(context);
+        }
 
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
+            progressBarText.setText("0");
         }
 
         @Override
-        protected Void doInBackground(Void... voids) {
+        protected File doInBackground(File... file) {
+            InputStream input = null;
+            OutputStream output = null;
+            int fileLength = alterAdbScreenCap();
 
+            try {
+                alterAdbScreenPull(file[0]);
+                input = new FileInputStream(file[0]);
+                output = new FileOutputStream(config.getLocalImageFilePath());
+                byte[] data = new byte[4096];
+                long total = 0;
+                int count;
+                while ((count = input.read(data)) != -1) {
+                    // allow canceling with back button
+                    if (isCancelled()) {
+                        input.close();
+                        return null;
+                    }
+                    total += count;
+                    // publishing the progress....
+                    if (fileLength > 0) { // only if total length is known
+                        publishProgress((int) (total * 100 / fileLength));
+                    }
+                    output.write(data, 0, count);
+                }
 
-            return null;
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    if (output != null)
+                        output.close();
+                    if (input != null)
+                        input.close();
+                } catch (IOException ignored) {
+                }
+            }
+
+//            adbHelper.screenshot(file[0]);
+            return file[0];
+        }
+
+        @SuppressLint("SetTextI18n")
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            super.onProgressUpdate(values);
+            progressBar.setIndeterminate(false);
+            progressBar.setProgress(values[0]);
+            progressBarText.setText(values[0].toString());
+//            System.out.println("Screen size " + values[0]);
         }
 
         @Override
-        protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
+        protected void onPostExecute(File newFile) {
+            super.onPostExecute(newFile);
+            // get a reference to the activity if it is still there
+            ScreenActivity activity = activityReference.get();
+            if (activity == null || activity.isFinishing()) return;
+
+            // modify the activity's UI
+//            if (newFile.renameTo(file)) {
+//                System.out.println("Rename files");
+//            }
+            progressBar.setProgress(0);
+            myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+            updateOrientation = true;
+            // access Activity member variables
+        }
+    }
+
+
+    int alterAdbScreenCap() {
+        String[] cmd;
+        try {
+            String myAdbCmd = config.getAdbCommand();
+            Shell.exec(myAdbCmd + " shell screencap -p " + config.getPhoneImageFilePath());
+            Shell.setOutputStream(Shell.OUTPUT.STDOUT);
+            System.out.println("alterAdbScreenCap " + DATE_FORMAT.format(Calendar.getInstance().getTime()));
+            cmd = Shell.exec(myAdbCmd + " shell ls -l " + config.getPhoneImageFilePath()).split("\\s+");
+            for (int i = 0; i < cmd.length; i++) {
+                if (i == 3) {
+//                    System.out.println("Screen size " + cmd[i]);
+                    return Integer.valueOf(cmd[i]);
+                }
+            }
+        } catch (Shell.ShellException e) {
+            Log.e(TAG, "Error adb shell: " + e);
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    void alterAdbScreenPull(File file) {
+        try {
+            String myAdbCmd = config.getAdbCommand();
+            Shell.exec(myAdbCmd + " pull " + config.getPhoneImageFilePath()
+                    + " " + file.getAbsolutePath());
+            System.out.println("alterAdbScreenPull " + DATE_FORMAT.format(Calendar.getInstance().getTime()));
+        } catch (Shell.ShellException e) {
+            Log.e(TAG, "Error pull image: " + e);
+            e.printStackTrace();
         }
     }
 }
+
+
