@@ -14,6 +14,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
 import android.text.method.DigitsKeyListener;
+import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -26,13 +27,19 @@ import android.widget.Toast;
 import com.jjnford.android.util.Shell;
 import com.nartkolai.droidadbtools.Utils.AlterDialogHelper;
 import com.nartkolai.droidadbtools.Utils.AlterDialogSelectorImpl;
+import com.nartkolai.droidadbtools.Utils.FsUtil;
 import com.nartkolai.droidadbtools.Utils.JSONUtil;
 import com.nartkolai.droidadbtools.Utils.MyPrefHelper;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 
 import name.schedenig.adbcontrol.Config;
 
@@ -53,7 +60,9 @@ public class MainActivity extends AppCompatActivity {
     final static String ADB_VENDOR_KEYS_PATH = MY_PATH + "/adbkey";
     final static String ADB_LD_LIBRARY_PATH = MY_PATH + "/lib";
     final static String ADB_BIN_PATH = MY_PATH + "/bin";
-//    final static String BIN_PATH = "/system/bin";
+    @SuppressLint("SdCardPath")
+    final static String SOURCE_ADB_PATH = "/sdcard/adb";
+    //    final static String BIN_PATH = "/system/bin";
 //    final static String LIB_PATH = "/system/lib";
     private String myAdbCmd;
     public static String useIpAdrDev;
@@ -62,6 +71,9 @@ public class MainActivity extends AppCompatActivity {
     public static String[] myExportPath;
     public static Config config;
     int REQUEST_CODE = 101;
+
+    private static final String KEY_PUBLIC = "adbkey.pub";
+    private static final String KEY_PRIVATE = "adbkey";
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("SdCardPath")
@@ -117,10 +129,10 @@ public class MainActivity extends AppCompatActivity {
         if (MyPrefHelper.getPref("adbCommand", "adb", this) == null) {
             chkConfig();
         }
-      //  startDbgUi();
+        //  startDbgUi();
     }
 
-    void startDbgUi(){
+    void startDbgUi() {
         sdkOs = Build.VERSION_CODES.M;
         debugUi = true;
         onStartScreenActivity();
@@ -150,6 +162,7 @@ public class MainActivity extends AppCompatActivity {
      */
     boolean initParam() {
         if (!initP) {
+            genKeyPair();
             jsonUtil.chkFile();// Check JSON files
             checkIfAlreadyhavePermission();
             checkIfAlreadyWritehavePermission();
@@ -192,22 +205,26 @@ public class MainActivity extends AppCompatActivity {
      * Adb binary file removed from android version more LOLLIPOP_MR1
      */
     void selectAdbCmdAndCopyBinFiles() {
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1/* || Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1*/) {
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1) {
             myAdbCmd = ADB_BIN_PATH + "/./adb";
-            String[] copyLibs = {"libcrypto.so"/*, "libc.so", "libdl.so", "libm.so", "libstdc++.so", "libc++.so"*/};
-
+            String[] copyLibs = {"libcrypto.so", "libc.so", "libdl.so", "libm.so", "libstdc++.so"};
+            myExportPath = new String[]{"LD_LIBRARY_PATH=$LD_LIBRARY_PATH:" + ADB_LD_LIBRARY_PATH + "/",
+                    "ADB_VENDOR_KEYS=$ADB_VENDOR_KEYS:" + ADB_VENDOR_KEYS_PATH + "/"};
             MyPrefHelper.putPref("adbCommand", myAdbCmd, this);
             try {
                 new FileInputStream(ADB_BIN_PATH + "/adb");
             } catch (FileNotFoundException e) {
                 try {
+                    if (!new File(ADB_BIN_PATH).mkdirs()) {
+                        Log.i(TAG, "Dir " + ADB_BIN_PATH + " not created");
+                    }
+                    File adbBin = new File(ADB_BIN_PATH + "/adb");
                     myExportPath = null;
-                    Shell.exec("mkdir " + ADB_BIN_PATH);
-                    Shell.exec("chmod 775 " + ADB_BIN_PATH);
-                    Shell.exec("cp -f /sdcard/adb/adb" + " " + ADB_BIN_PATH + "/adb");
-                    Shell.exec("chmod 755 " + ADB_BIN_PATH + "/adb");
-                } catch (Shell.ShellException e1) {
-                    e1.printStackTrace();
+                    FsUtil.copyFile(new File(SOURCE_ADB_PATH + "/adb"), adbBin);
+                    FsUtil.chmodFile(adbBin);
+
+                } catch (IOException ex) {
+                    ex.printStackTrace();
                 }
                 Log.e(TAG, "adb bin no found " + e);
             }
@@ -216,13 +233,13 @@ public class MainActivity extends AppCompatActivity {
                     new FileInputStream(ADB_LD_LIBRARY_PATH + "/" + copyLib);
                 } catch (FileNotFoundException e) {
                     try {
-                        myExportPath = null;
-                        Shell.exec("mkdir " + ADB_LD_LIBRARY_PATH);
-                        Shell.exec("chmod 775 " + ADB_LD_LIBRARY_PATH);
-                        Shell.exec("cp -f /sdcard/adb/" + copyLib + " " + ADB_LD_LIBRARY_PATH + "/" + copyLib);
-                        Shell.exec("chmod 755 " + ADB_LD_LIBRARY_PATH + "/" + copyLib);
-                    } catch (Shell.ShellException e1) {
-                        e1.printStackTrace();
+                        if (new File(ADB_LD_LIBRARY_PATH).mkdirs()) {
+                            Log.e(TAG, "Dir " + ADB_LD_LIBRARY_PATH + " not created");
+                        }
+                        FsUtil.copyFile(new File(SOURCE_ADB_PATH + "/" + copyLib),
+                                new File(ADB_LD_LIBRARY_PATH + "/" + copyLib));
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
                     }
                     Log.e(TAG, "Lib " + copyLib + " no found " + e);
                 }
@@ -230,22 +247,11 @@ public class MainActivity extends AppCompatActivity {
             try {
                 new FileInputStream(ADB_VENDOR_KEYS_PATH + "/public");
             } catch (FileNotFoundException e) {
-                try {
-                    myExportPath = null;
-                    Shell.exec("mkdir " + ADB_VENDOR_KEYS_PATH);
-                    Shell.exec("chmod 775 " + ADB_VENDOR_KEYS_PATH);
-                    myExportPath = new String[]{"LD_LIBRARY_PATH=$LD_LIBRARY_PATH:" + ADB_LD_LIBRARY_PATH + "/",
-                            "ADB_VENDOR_KEYS=$ADB_VENDOR_KEYS:" + ADB_VENDOR_KEYS_PATH + "/"};
-                    adbActionKeygen();
-                } catch (Shell.ShellException e1) {
-                    e1.printStackTrace();
-                }
+                adbActionKeygen();
                 Log.e(TAG, "RSA key no found " + e);
             }
-            myExportPath = new String[]{"LD_LIBRARY_PATH=$LD_LIBRARY_PATH:" + ADB_LD_LIBRARY_PATH + "/",
-                    "ADB_VENDOR_KEYS=$ADB_VENDOR_KEYS:" + ADB_VENDOR_KEYS_PATH + "/"};
         } else {
-            myExportPath = null;
+            myExportPath = new String[]{"PATH=$PATH:/system/bin", "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/system/lib", "ADB_VENDOR_KEYS=$ADB_VENDOR_KEYS:" + ADB_VENDOR_KEYS_PATH + "/"};
             myAdbCmd = "adb";
             MyPrefHelper.putPref("adbCommand", myAdbCmd, this);
         }
@@ -254,6 +260,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Method called by alternative dialogue, device selection
+     *
      * @param position  item from the list to connect
      * @param longClick long press on the selected item to delete it
      */
@@ -416,8 +423,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void adbActionKeygen() {
+        if (new File(ADB_VENDOR_KEYS_PATH).mkdirs()) {
+            Log.e(TAG, "Dir " + ADB_VENDOR_KEYS_PATH + " not created");
+        }
         try {
-            ///private
             Shell.setOutputStream(Shell.OUTPUT.STDERR);
             cmd = Shell.exec(myAdbCmd + " keygen " + ADB_VENDOR_KEYS_PATH + "/public").split("\\n+");
             txtSetter(cmd);
@@ -433,7 +442,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1) {
             MenuItem item = menu.findItem(R.id.action_keygen);
             item.setVisible(false);
         }
@@ -662,9 +671,44 @@ public class MainActivity extends AppCompatActivity {
         return sdkv;
     }
 
+    private void genKeyPair() {
+        KeyPair keyPair;
+        try {
+            new FileInputStream(ADB_VENDOR_KEYS_PATH + "/adbkey");
+        } catch (FileNotFoundException e1) {
+            try {
+                if (new File(ADB_VENDOR_KEYS_PATH).mkdirs()) {
+                    Log.e(TAG, "Dir " + ADB_VENDOR_KEYS_PATH + " not created");
+                }
+                    KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+                    generator.initialize(2048);
+                    keyPair = generator.generateKeyPair();
+                    FileOutputStream streamFilePubKey = new FileOutputStream(new File(ADB_VENDOR_KEYS_PATH, KEY_PUBLIC));
+                    FileOutputStream streamFilePrivKey = new FileOutputStream(new File(ADB_VENDOR_KEYS_PATH, KEY_PRIVATE));
+                    try {
+                        String pub = Base64.encodeToString(keyPair.getPublic().getEncoded(), Base64.DEFAULT);
+                        String priv = Base64.encodeToString(keyPair.getPrivate().getEncoded(), Base64.DEFAULT);
+                        streamFilePubKey.write(pub.getBytes("UTF-8"));
+                        streamFilePrivKey.write(("-----BEGIN PRIVATE KEY-----" + "\n" + priv + "-----END PRIVATE KEY-----").getBytes("UTF-8"));
+                    } finally {
+                        streamFilePubKey.close();
+                        streamFilePrivKey.close();
+                    }
+            } catch (IOException e) {
+                Log.e("Exception", "adb key write failed: " + e.toString());
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     @Override
     protected void onResume() {
         selectAdbCmdAndCopyBinFiles();
         super.onResume();
+    }
+
+    public void startAdbLib(View view) {
+      //  startActivity(new Intent(this, AdbCheckLibActivity.class));
     }
 }
