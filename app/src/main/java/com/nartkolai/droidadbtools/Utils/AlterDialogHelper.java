@@ -23,7 +23,7 @@ public class AlterDialogHelper extends AlertDialog{
         this.context = context;
     }
 
-    public AlertDialog displayDialog(final AlterDialogSelectorImpl mySel) {
+    public AlertDialog displayDialog(final AlterDialogSelector mySel) {
         final String[] list = mySel.getItemList();
         final EditText input = new EditText(context);
         final Builder builder = new Builder(context);

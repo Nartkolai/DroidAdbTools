@@ -5,7 +5,7 @@ import android.text.method.KeyListener;
 
 import java.lang.reflect.Method;
 
-public class AlterDialogSelectorImpl implements AlterDialogSelector {
+public class MySelectorHelper implements AlterDialogSelector {
     private String[] list = null;
     private String tilts = "";
     private String subTilts = "";
@@ -17,7 +17,7 @@ public class AlterDialogSelectorImpl implements AlterDialogSelector {
     private KeyListener keyListener;
 
 
-    public AlterDialogSelectorImpl(Object object, Method method){
+    public MySelectorHelper(Object object, Method method){
         this.object = object;
         this.method = method;
     }

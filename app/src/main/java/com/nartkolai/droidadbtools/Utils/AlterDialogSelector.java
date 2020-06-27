@@ -1,5 +1,7 @@
 package com.nartkolai.droidadbtools.Utils;
 
+import android.text.method.KeyListener;
+
 import java.lang.reflect.Method;
 
 public interface AlterDialogSelector {
@@ -72,4 +74,8 @@ public interface AlterDialogSelector {
       * @param text action description text
       */
      void toAlterDialogNoItem(String tilts, String text);
+
+     KeyListener getKeyListener();
+
+     void setKeyListener(KeyListener keyListener);
 }
